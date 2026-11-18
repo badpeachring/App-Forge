@@ -5,6 +5,7 @@ import { VRMLoaderPlugin, VRMUtils } from "@pixiv/three-vrm";
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 const TOKEN_KEY = "app_forge_gh_token_v1";
 let ghUser = "", currentSha = null, isNewFile = false, typingTimer = null, mjMode = "idle", currentVrm = null;
+let baseFacing = 0, nsfwEnabled = false;
 const $ = id => document.getElementById(id);
 const getHeaders = () => ({ "Authorization": `Bearer ${localStorage.getItem(TOKEN_KEY) || ""}`, "Accept": "application/vnd.github+json", "Content-Type": "application/json" });
 
@@ -15,18 +16,18 @@ scene.background = new THREE.Color(0x140b20);
 scene.fog = new THREE.FogExp2(0x140b20, 0.055);
 
 const cam = new THREE.PerspectiveCamera(34, w / h, 0.1, 50);
-cam.position.set(0.18, 1.30, 2.30);
-cam.lookAt(-0.10, 1.02, 0);
+cam.position.set(0.15, 1.28, 2.25);
+cam.lookAt(-0.08, 1.00, 0);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(w, h);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.15;
+renderer.toneMappingExposure = 1.18;
 box.appendChild(renderer.domElement);
 
-scene.add(new THREE.AmbientLight(0xffedd5, 0.8));
-const keyLight = new THREE.DirectionalLight(0xfff1f2, 1.35);
+scene.add(new THREE.AmbientLight(0xffedd5, 0.85));
+const keyLight = new THREE.DirectionalLight(0xfff1f2, 1.4);
 keyLight.position.set(1.5, 2.5, 2.2);
 scene.add(keyLight);
 const crtLight = new THREE.PointLight(0x38bdf8, 1.8, 4);
@@ -48,16 +49,24 @@ loader.load("mj.vrm", gltf => {
   if (!vrm) return;
   VRMUtils.removeUnnecessaryVertices(gltf.scene);
   VRMUtils.removeUnnecessaryJoints(gltf.scene);
-  VRMUtils.rotateVRM0(vrm);
+  // VRM 1.0 faces +Z naturally; if VRM 0.x detected, flip automatically
+  if (vrm.meta?.metaVersion === "0") VRMUtils.rotateVRM0(vrm);
   currentVrm = vrm;
-  vrm.scene.position.set(0.08, -0.38, 0.15);
+  vrm.scene.position.set(0.10, -0.38, 0.18);
   vrm.scene.matrixAutoUpdate = false;
   vrm.scene.updateMatrix();
   scene.add(vrm.scene);
-  setMjState("idle", "mj.vrm loaded & locked in place!");
-}, undefined, err => setMjState("idle", "Place mj.vrm in repo root."));
+  setMjState("idle", "Facing forward and ready, tiger!");
+}, undefined, () => setMjState("idle", "Place mj.vrm in repo root."));
 
 const lerp = THREE.MathUtils.lerp;
+function smoothBone(bone, rx, ry, rz, speed = 0.12) {
+  if (!bone) return;
+  bone.rotation.x = lerp(bone.rotation.x, rx, speed);
+  bone.rotation.y = lerp(bone.rotation.y, ry, speed);
+  bone.rotation.z = lerp(bone.rotation.z, rz, speed);
+}
+
 const clock = new THREE.Clock();
 function animate() {
   requestAnimationFrame(animate);
@@ -65,44 +74,130 @@ function animate() {
   const t = clock.elapsedTime;
   if (currentVrm) {
     const h = currentVrm.humanoid, exp = currentVrm.expressionManager;
-    if (exp) {
-      const blinkCycle = t % 3.6;
-      exp.setValue("blink", blinkCycle > 3.45 ? Math.sin(((blinkCycle - 3.45) / 0.15) * Math.PI) : 0);
-      exp.setValue("happy", mjMode === "celebrate" ? 0.95 : mjMode === "wave" ? 0.65 : 0.3);
-    }
-    const lUpLeg = h.getNormalizedBoneNode("leftUpperLeg"), rUpLeg = h.getNormalizedBoneNode("rightUpperLeg");
-    const lLoLeg = h.getNormalizedBoneNode("leftLowerLeg"), rLoLeg = h.getNormalizedBoneNode("rightLowerLeg");
-    if (lUpLeg && rUpLeg) { lUpLeg.rotation.x = 1.35; rUpLeg.rotation.x = 1.35; }
-    if (lLoLeg && rLoLeg) { lLoLeg.rotation.x = -1.35; rLoLeg.rotation.x = -1.35; }
-
-    const spine = h.getNormalizedBoneNode("spine"), head = h.getNormalizedBoneNode("head");
+    const hips = h.getNormalizedBoneNode("hips");
+    const spine = h.getNormalizedBoneNode("spine");
+    const chest = h.getNormalizedBoneNode("chest");
+    const neck = h.getNormalizedBoneNode("neck");
+    const head = h.getNormalizedBoneNode("head");
+    const lSh = h.getNormalizedBoneNode("leftShoulder"), rSh = h.getNormalizedBoneNode("rightShoulder");
     const lArm = h.getNormalizedBoneNode("leftUpperArm"), rArm = h.getNormalizedBoneNode("rightUpperArm");
     const lFore = h.getNormalizedBoneNode("leftLowerArm"), rFore = h.getNormalizedBoneNode("rightLowerArm");
+    const lHand = h.getNormalizedBoneNode("leftHand"), rHand = h.getNormalizedBoneNode("rightHand");
+    const lUpLeg = h.getNormalizedBoneNode("leftUpperLeg"), rUpLeg = h.getNormalizedBoneNode("rightUpperLeg");
+    const lLoLeg = h.getNormalizedBoneNode("leftLowerLeg"), rLoLeg = h.getNormalizedBoneNode("rightLowerLeg");
+
+    // Blink + Facial Expressions
+    if (exp) {
+      const blinkCycle = t % 3.4;
+      exp.setValue("blink", blinkCycle > 3.25 ? Math.sin(((blinkCycle - 3.25) / 0.15) * Math.PI) : 0);
+      exp.setValue("happy", (mjMode === "celebrate" || mjMode === "kiss") ? 0.9 : (mjMode === "tease" || mjMode === "sway") ? 0.65 : 0.35);
+      exp.setValue("ou", mjMode === "kiss" ? 0.75 : 0);
+    }
+
+    // Natural Seated Legs (Slight feminine crossover angle)
+    smoothBone(lUpLeg, 1.32, 0.08, -0.06, 0.1);
+    smoothBone(rUpLeg, 1.38, -0.14, 0.08, 0.1);
+    smoothBone(lLoLeg, -1.32, 0, 0, 0.1);
+    smoothBone(rLoLeg, -1.42, 0, 0, 0.1);
+
+    // Subtle Natural Breathing Wave
+    const breath = Math.sin(t * 2.4);
+    smoothBone(lSh, 0, 0, 0.04 + breath * 0.015, 0.1);
+    smoothBone(rSh, 0, 0, -0.04 - breath * 0.015, 0.1);
 
     if (mjMode === "hack") {
-      currentVrm.scene.rotation.y = lerp(currentVrm.scene.rotation.y, -0.78, 0.12);
-      if (spine) spine.rotation.x = 0.14 + Math.sin(t * 14) * 0.015;
-      if (head) head.rotation.y = -0.15;
-      if (lArm && rArm) { lArm.rotation.set(0.62, 0, 0.42); rArm.rotation.set(0.62, 0, -0.42); }
-      if (lFore && rFore) { lFore.rotation.set(0.85 + Math.sin(t * 28) * 0.14, 0, 0.25); rFore.rotation.set(0.85 + Math.cos(t * 28) * 0.14, 0, -0.25); }
+      currentVrm.scene.rotation.y = lerp(currentVrm.scene.rotation.y, baseFacing - 0.75, 0.12);
+      smoothBone(hips, 0.06, 0, 0, 0.12);
+      smoothBone(spine, 0.10 + breath * 0.01, -0.08, 0, 0.12);
+      smoothBone(chest, 0.08, -0.06, 0, 0.12);
+      smoothBone(neck, 0.06, -0.08, 0, 0.12);
+      smoothBone(head, 0.05, -0.10, 0, 0.12);
+      smoothBone(lArm, 0.58, 0.12, 0.38, 0.14);
+      smoothBone(rArm, 0.58, -0.12, -0.38, 0.14);
+      smoothBone(lFore, 0.88 + Math.sin(t * 28) * 0.12, 0, 0.22, 0.25);
+      smoothBone(rFore, 0.88 + Math.cos(t * 28) * 0.12, 0, -0.22, 0.25);
+      smoothBone(lHand, -0.15, 0, 0, 0.2);
+      smoothBone(rHand, -0.15, 0, 0, 0.2);
       screen.material.color.setHex(Math.sin(t * 18) > 0 ? 0x38bdf8 : 0x34d399);
     } else if (mjMode === "celebrate") {
-      currentVrm.scene.rotation.y = lerp(currentVrm.scene.rotation.y, 0.18, 0.12);
-      if (spine) spine.rotation.z = Math.sin(t * 8) * 0.06;
-      if (lArm && rArm) { lArm.rotation.set(0.25, 0, -0.95 + Math.sin(t * 10) * 0.18); rArm.rotation.set(0.25, 0, 0.95 - Math.sin(t * 10) * 0.18); }
+      currentVrm.scene.rotation.y = lerp(currentVrm.scene.rotation.y, baseFacing + 0.12, 0.12);
+      smoothBone(spine, -0.04, 0, Math.sin(t * 7) * 0.06, 0.12);
+      smoothBone(chest, -0.04, 0, Math.sin(t * 7) * 0.05, 0.12);
+      smoothBone(head, -0.05, Math.sin(t * 5) * 0.1, 0, 0.12);
+      smoothBone(lArm, 0.25, 0, -0.85 + Math.sin(t * 9) * 0.15, 0.14);
+      smoothBone(rArm, 0.25, 0, 0.85 - Math.sin(t * 9) * 0.15, 0.14);
+      smoothBone(lFore, 0.45, 0, -0.35, 0.14);
+      smoothBone(rFore, 0.45, 0, 0.35, 0.14);
       screen.material.color.setHex(0x10b981);
     } else if (mjMode === "wave") {
-      currentVrm.scene.rotation.y = lerp(currentVrm.scene.rotation.y, 0.22, 0.12);
-      if (lArm && rArm) { lArm.rotation.set(0.18, 0, 1.15); rArm.rotation.set(0.22, 0, 0.85 + Math.sin(t * 9) * 0.25); }
+      currentVrm.scene.rotation.y = lerp(currentVrm.scene.rotation.y, baseFacing + 0.18, 0.12);
+      smoothBone(spine, 0, 0.04, -0.04, 0.1);
+      smoothBone(chest, 0, 0.04, -0.03, 0.1);
+      smoothBone(head, -0.03, 0.12, -0.08, 0.1);
+      smoothBone(lArm, 0.24, 0, 1.12, 0.12);
+      smoothBone(lFore, 0.42, 0, 0.18, 0.12);
+      smoothBone(rArm, 0.20, 0.15, 0.72 + Math.sin(t * 8) * 0.18, 0.14);
+      smoothBone(rFore, 0.55, 0, 0.45 + Math.cos(t * 8) * 0.22, 0.16);
       screen.material.color.setHex(0x0ea5e9);
+    } else if (mjMode === "sway") {
+      const s = Math.sin(t * 3.2);
+      currentVrm.scene.rotation.y = lerp(currentVrm.scene.rotation.y, baseFacing + s * 0.22, 0.1);
+      smoothBone(hips, 0, s * 0.12, s * 0.06, 0.1);
+      smoothBone(spine, 0.04, -s * 0.10, -s * 0.07, 0.1);
+      smoothBone(chest, 0.06, -s * 0.08, -s * 0.06, 0.1);
+      smoothBone(head, -0.04, s * 0.14, s * 0.08, 0.1);
+      smoothBone(lArm, 0.32, 0.2, 0.92 + s * 0.12, 0.1);
+      smoothBone(rArm, 0.32, -0.2, -0.92 + s * 0.12, 0.1);
+      smoothBone(lFore, 0.65, 0, 0.35, 0.1);
+      smoothBone(rFore, 0.65, 0, -0.35, 0.1);
+    } else if (mjMode === "kiss") {
+      currentVrm.scene.rotation.y = lerp(currentVrm.scene.rotation.y, baseFacing + 0.12, 0.12);
+      smoothBone(spine, 0.08, 0, -0.04, 0.12);
+      smoothBone(chest, 0.08, 0, -0.04, 0.12);
+      smoothBone(head, -0.04, 0.08, -0.10, 0.12);
+      smoothBone(lArm, 0.24, 0, 1.12, 0.12);
+      smoothBone(lFore, 0.42, 0, 0.18, 0.12);
+      smoothBone(rArm, 0.85, 0.35, -0.45, 0.14);
+      smoothBone(rFore, 1.35 + Math.sin(t * 4) * 0.08, 0, -0.35, 0.14);
+      smoothBone(rHand, -0.25, 0, 0, 0.14);
+    } else if (mjMode === "kneel") {
+      currentVrm.scene.rotation.y = lerp(currentVrm.scene.rotation.y, baseFacing + 0.15, 0.1);
+      smoothBone(hips, 0.14, 0.08, 0, 0.1);
+      smoothBone(spine, -0.12, 0, 0.04, 0.1);
+      smoothBone(chest, -0.14, 0, 0.05, 0.1);
+      smoothBone(head, 0.08, 0.10, 0.09, 0.1);
+      smoothBone(lArm, 0.18, -0.25, 0.85, 0.1);
+      smoothBone(rArm, 0.18, 0.25, -0.85, 0.1);
+      smoothBone(lFore, 0.95, 0, 0.45, 0.1);
+      smoothBone(rFore, 0.95, 0, -0.45, 0.1);
+    } else if (mjMode === "tease") {
+      const wv = Math.sin(t * 2.8);
+      currentVrm.scene.rotation.y = lerp(currentVrm.scene.rotation.y, baseFacing + 0.24 + wv * 0.08, 0.1);
+      smoothBone(spine, 0.10, -0.12, 0.05, 0.1);
+      smoothBone(chest, 0.12, -0.10, 0.05, 0.1);
+      smoothBone(neck, -0.05, 0.14, -0.06, 0.1);
+      smoothBone(head, -0.06, 0.18, -0.12, 0.1);
+      smoothBone(lArm, 0.42, 0.3, 0.78, 0.12);
+      smoothBone(lFore, 0.85, 0, 0.45, 0.12);
+      smoothBone(rArm, -0.15, -0.35, -0.75, 0.12);
+      smoothBone(rFore, 0.95 + wv * 0.08, 0, -0.45, 0.12);
     } else {
-      currentVrm.scene.rotation.y = lerp(currentVrm.scene.rotation.y, 0.22, 0.08);
-      if (spine) { spine.rotation.x = Math.sin(t * 2) * 0.025; spine.rotation.z = 0; }
-      if (head) head.rotation.y = Math.sin(t * 1.1) * 0.07;
-      if (lArm && rArm) { lArm.rotation.set(0.22, 0, 1.12); rArm.rotation.set(0.22, 0, -1.12); }
-      if (lFore && rFore) { lFore.rotation.set(0.38, 0, 0.18); rFore.rotation.set(0.38, 0, -0.18); }
+      // Fluid Relaxed Idle (Natural breathing, subtle head/shoulder sway, soft hand rest)
+      currentVrm.scene.rotation.y = lerp(currentVrm.scene.rotation.y, baseFacing + 0.18, 0.08);
+      smoothBone(hips, 0, Math.sin(t * 0.9) * 0.03, 0, 0.08);
+      smoothBone(spine, 0.03 + breath * 0.02, Math.sin(t * 1.1) * 0.03, Math.cos(t * 0.8) * 0.02, 0.08);
+      smoothBone(chest, 0.02 + breath * 0.025, Math.sin(t * 1.1) * 0.02, 0, 0.08);
+      smoothBone(neck, -0.02, Math.sin(t * 0.9) * 0.05, Math.cos(t * 0.7) * 0.03, 0.08);
+      smoothBone(head, -0.02 + breath * 0.015, 0.08 + Math.sin(t * 0.85) * 0.07, Math.sin(t * 0.65) * 0.04, 0.08);
+      smoothBone(lArm, 0.24 + breath * 0.02, 0.08, 1.08 + breath * 0.02, 0.1);
+      smoothBone(rArm, 0.24 + breath * 0.02, -0.08, -1.08 - breath * 0.02, 0.1);
+      smoothBone(lFore, 0.44, 0, 0.22, 0.1);
+      smoothBone(rFore, 0.44, 0, -0.22, 0.1);
+      smoothBone(lHand, 0.08, 0, 0.05, 0.1);
+      smoothBone(rHand, 0.08, 0, -0.05, 0.1);
       screen.material.color.setHex(0x0284c7);
     }
+
     currentVrm.scene.updateMatrix();
     currentVrm.update(dt);
   }
@@ -116,10 +211,29 @@ function setBadge(text, tone = "idle") {
   b.className = tone === "ok" ? "px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-500/25 border border-emerald-400 text-emerald-200" : tone === "busy" ? "px-3 py-1 rounded-full text-[11px] font-bold bg-amber-500/25 border border-amber-400 text-amber-200" : "px-3 py-1 rounded-full text-[11px] font-bold bg-black/65 border border-amber-400/35 text-amber-200";
 }
 
-$("cmdIdleBtn").onclick = () => setMjState("idle", "Locked in place and ready.");
-$("cmdHackBtn").onclick = () => setMjState("hack", "Terminal engaged!");
-$("cmdWaveBtn").onclick = () => setMjState("wave", "Hey there!");
-$("cmdCelebrateBtn").onclick = () => setMjState("celebrate", "Build live!");
+// Settings Popover & NSFW 4-Button Toggle
+$("settingsBtn").onclick = () => $("settingsPopover").classList.toggle("hidden");
+$("flipFacingBtn").onclick = () => { baseFacing = baseFacing === 0 ? Math.PI : 0; $("settingsPopover").classList.add("hidden"); };
+$("nsfwToggleBtn").onclick = () => {
+  nsfwEnabled = !nsfwEnabled;
+  const btn = $("nsfwToggleBtn");
+  btn.textContent = nsfwEnabled ? "ON" : "OFF";
+  btn.className = nsfwEnabled
+    ? "px-2.5 py-1 rounded-full text-[10px] font-black bg-rose-500 text-white"
+    : "px-2.5 py-1 rounded-full text-[10px] font-black bg-slate-800 border border-rose-500/40 text-rose-300";
+  $("nsfwBar").classList.toggle("hidden", !nsfwEnabled);
+  $("settingsPopover").classList.add("hidden");
+  if (nsfwEnabled) setMjState("tease", "Extra studio poses unlocked, tiger...");
+};
+
+$("cmdIdleBtn").onclick = () => setMjState("idle", "Chilling in the loft — ready when you are.");
+$("cmdHackBtn").onclick = () => setMjState("hack", "Terminal engaged! Typing your build...");
+$("cmdWaveBtn").onclick = () => setMjState("wave", "Hey there! Systems green.");
+$("cmdCelebrateBtn").onclick = () => setMjState("celebrate", "Woohoo! Build live on Pages!");
+$("cmdSwayBtn").onclick = () => setMjState("sway", "Feeling the vibe in the loft...");
+$("cmdKissBtn").onclick = () => setMjState("kiss", "Muah! Good luck on this deploy, tiger.");
+$("cmdKneelBtn").onclick = () => setMjState("kneel", "Striking a pose for you...");
+$("cmdTeaseBtn").onclick = () => setMjState("tease", "Like what you see? Let's ship some code.");
 
 async function initConnection() {
   const tok = localStorage.getItem(TOKEN_KEY); if (!tok) return;
