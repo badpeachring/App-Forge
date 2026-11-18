@@ -49,10 +49,9 @@ loader.load("mj.vrm", gltf => {
   if (!vrm) return;
   VRMUtils.removeUnnecessaryVertices(gltf.scene);
   VRMUtils.removeUnnecessaryJoints(gltf.scene);
-  // VRM 1.0 faces +Z naturally; if VRM 0.x detected, flip automatically
-  if (vrm.meta?.metaVersion === "0") VRMUtils.rotateVRM0(vrm);
   currentVrm = vrm;
   vrm.scene.position.set(0.10, -0.38, 0.18);
+  vrm.scene.rotation.y = Math.PI; // Correct default front-facing orientation
   vrm.scene.matrixAutoUpdate = false;
   vrm.scene.updateMatrix();
   scene.add(vrm.scene);
@@ -86,7 +85,6 @@ function animate() {
     const lUpLeg = h.getNormalizedBoneNode("leftUpperLeg"), rUpLeg = h.getNormalizedBoneNode("rightUpperLeg");
     const lLoLeg = h.getNormalizedBoneNode("leftLowerLeg"), rLoLeg = h.getNormalizedBoneNode("rightLowerLeg");
 
-    // Blink + Facial Expressions
     if (exp) {
       const blinkCycle = t % 3.4;
       exp.setValue("blink", blinkCycle > 3.25 ? Math.sin(((blinkCycle - 3.25) / 0.15) * Math.PI) : 0);
@@ -94,19 +92,19 @@ function animate() {
       exp.setValue("ou", mjMode === "kiss" ? 0.75 : 0);
     }
 
-    // Natural Seated Legs (Slight feminine crossover angle)
     smoothBone(lUpLeg, 1.32, 0.08, -0.06, 0.1);
     smoothBone(rUpLeg, 1.38, -0.14, 0.08, 0.1);
     smoothBone(lLoLeg, -1.32, 0, 0, 0.1);
     smoothBone(rLoLeg, -1.42, 0, 0, 0.1);
 
-    // Subtle Natural Breathing Wave
     const breath = Math.sin(t * 2.4);
     smoothBone(lSh, 0, 0, 0.04 + breath * 0.015, 0.1);
     smoothBone(rSh, 0, 0, -0.04 - breath * 0.015, 0.1);
 
+    const targetRotY = baseFacing + (mjMode === "hack" ? -0.75 : mjMode === "sway" ? Math.sin(t * 3.2) * 0.22 : 0.18);
+    currentVrm.scene.rotation.y = lerp(currentVrm.scene.rotation.y, targetRotY, 0.1);
+
     if (mjMode === "hack") {
-      currentVrm.scene.rotation.y = lerp(currentVrm.scene.rotation.y, baseFacing - 0.75, 0.12);
       smoothBone(hips, 0.06, 0, 0, 0.12);
       smoothBone(spine, 0.10 + breath * 0.01, -0.08, 0, 0.12);
       smoothBone(chest, 0.08, -0.06, 0, 0.12);
@@ -116,13 +114,9 @@ function animate() {
       smoothBone(rArm, 0.58, -0.12, -0.38, 0.14);
       smoothBone(lFore, 0.88 + Math.sin(t * 28) * 0.12, 0, 0.22, 0.25);
       smoothBone(rFore, 0.88 + Math.cos(t * 28) * 0.12, 0, -0.22, 0.25);
-      smoothBone(lHand, -0.15, 0, 0, 0.2);
-      smoothBone(rHand, -0.15, 0, 0, 0.2);
       screen.material.color.setHex(Math.sin(t * 18) > 0 ? 0x38bdf8 : 0x34d399);
     } else if (mjMode === "celebrate") {
-      currentVrm.scene.rotation.y = lerp(currentVrm.scene.rotation.y, baseFacing + 0.12, 0.12);
       smoothBone(spine, -0.04, 0, Math.sin(t * 7) * 0.06, 0.12);
-      smoothBone(chest, -0.04, 0, Math.sin(t * 7) * 0.05, 0.12);
       smoothBone(head, -0.05, Math.sin(t * 5) * 0.1, 0, 0.12);
       smoothBone(lArm, 0.25, 0, -0.85 + Math.sin(t * 9) * 0.15, 0.14);
       smoothBone(rArm, 0.25, 0, 0.85 - Math.sin(t * 9) * 0.15, 0.14);
@@ -130,9 +124,7 @@ function animate() {
       smoothBone(rFore, 0.45, 0, 0.35, 0.14);
       screen.material.color.setHex(0x10b981);
     } else if (mjMode === "wave") {
-      currentVrm.scene.rotation.y = lerp(currentVrm.scene.rotation.y, baseFacing + 0.18, 0.12);
       smoothBone(spine, 0, 0.04, -0.04, 0.1);
-      smoothBone(chest, 0, 0.04, -0.03, 0.1);
       smoothBone(head, -0.03, 0.12, -0.08, 0.1);
       smoothBone(lArm, 0.24, 0, 1.12, 0.12);
       smoothBone(lFore, 0.42, 0, 0.18, 0.12);
@@ -141,30 +133,22 @@ function animate() {
       screen.material.color.setHex(0x0ea5e9);
     } else if (mjMode === "sway") {
       const s = Math.sin(t * 3.2);
-      currentVrm.scene.rotation.y = lerp(currentVrm.scene.rotation.y, baseFacing + s * 0.22, 0.1);
       smoothBone(hips, 0, s * 0.12, s * 0.06, 0.1);
       smoothBone(spine, 0.04, -s * 0.10, -s * 0.07, 0.1);
-      smoothBone(chest, 0.06, -s * 0.08, -s * 0.06, 0.1);
       smoothBone(head, -0.04, s * 0.14, s * 0.08, 0.1);
       smoothBone(lArm, 0.32, 0.2, 0.92 + s * 0.12, 0.1);
       smoothBone(rArm, 0.32, -0.2, -0.92 + s * 0.12, 0.1);
       smoothBone(lFore, 0.65, 0, 0.35, 0.1);
       smoothBone(rFore, 0.65, 0, -0.35, 0.1);
     } else if (mjMode === "kiss") {
-      currentVrm.scene.rotation.y = lerp(currentVrm.scene.rotation.y, baseFacing + 0.12, 0.12);
       smoothBone(spine, 0.08, 0, -0.04, 0.12);
-      smoothBone(chest, 0.08, 0, -0.04, 0.12);
       smoothBone(head, -0.04, 0.08, -0.10, 0.12);
       smoothBone(lArm, 0.24, 0, 1.12, 0.12);
-      smoothBone(lFore, 0.42, 0, 0.18, 0.12);
       smoothBone(rArm, 0.85, 0.35, -0.45, 0.14);
       smoothBone(rFore, 1.35 + Math.sin(t * 4) * 0.08, 0, -0.35, 0.14);
-      smoothBone(rHand, -0.25, 0, 0, 0.14);
     } else if (mjMode === "kneel") {
-      currentVrm.scene.rotation.y = lerp(currentVrm.scene.rotation.y, baseFacing + 0.15, 0.1);
       smoothBone(hips, 0.14, 0.08, 0, 0.1);
       smoothBone(spine, -0.12, 0, 0.04, 0.1);
-      smoothBone(chest, -0.14, 0, 0.05, 0.1);
       smoothBone(head, 0.08, 0.10, 0.09, 0.1);
       smoothBone(lArm, 0.18, -0.25, 0.85, 0.1);
       smoothBone(rArm, 0.18, 0.25, -0.85, 0.1);
@@ -172,29 +156,19 @@ function animate() {
       smoothBone(rFore, 0.95, 0, -0.45, 0.1);
     } else if (mjMode === "tease") {
       const wv = Math.sin(t * 2.8);
-      currentVrm.scene.rotation.y = lerp(currentVrm.scene.rotation.y, baseFacing + 0.24 + wv * 0.08, 0.1);
       smoothBone(spine, 0.10, -0.12, 0.05, 0.1);
-      smoothBone(chest, 0.12, -0.10, 0.05, 0.1);
-      smoothBone(neck, -0.05, 0.14, -0.06, 0.1);
       smoothBone(head, -0.06, 0.18, -0.12, 0.1);
       smoothBone(lArm, 0.42, 0.3, 0.78, 0.12);
-      smoothBone(lFore, 0.85, 0, 0.45, 0.12);
       smoothBone(rArm, -0.15, -0.35, -0.75, 0.12);
       smoothBone(rFore, 0.95 + wv * 0.08, 0, -0.45, 0.12);
     } else {
-      // Fluid Relaxed Idle (Natural breathing, subtle head/shoulder sway, soft hand rest)
-      currentVrm.scene.rotation.y = lerp(currentVrm.scene.rotation.y, baseFacing + 0.18, 0.08);
       smoothBone(hips, 0, Math.sin(t * 0.9) * 0.03, 0, 0.08);
-      smoothBone(spine, 0.03 + breath * 0.02, Math.sin(t * 1.1) * 0.03, Math.cos(t * 0.8) * 0.02, 0.08);
-      smoothBone(chest, 0.02 + breath * 0.025, Math.sin(t * 1.1) * 0.02, 0, 0.08);
-      smoothBone(neck, -0.02, Math.sin(t * 0.9) * 0.05, Math.cos(t * 0.7) * 0.03, 0.08);
-      smoothBone(head, -0.02 + breath * 0.015, 0.08 + Math.sin(t * 0.85) * 0.07, Math.sin(t * 0.65) * 0.04, 0.08);
-      smoothBone(lArm, 0.24 + breath * 0.02, 0.08, 1.08 + breath * 0.02, 0.1);
-      smoothBone(rArm, 0.24 + breath * 0.02, -0.08, -1.08 - breath * 0.02, 0.1);
+      smoothBone(spine, 0.03 + breath * 0.02, Math.sin(t * 1.1) * 0.03, 0, 0.08);
+      smoothBone(head, -0.02 + breath * 0.015, 0.08 + Math.sin(t * 0.85) * 0.07, 0, 0.08);
+      smoothBone(lArm, 0.24 + breath * 0.02, 0.08, 1.08, 0.1);
+      smoothBone(rArm, 0.24 + breath * 0.02, -0.08, -1.08, 0.1);
       smoothBone(lFore, 0.44, 0, 0.22, 0.1);
       smoothBone(rFore, 0.44, 0, -0.22, 0.1);
-      smoothBone(lHand, 0.08, 0, 0.05, 0.1);
-      smoothBone(rHand, 0.08, 0, -0.05, 0.1);
       screen.material.color.setHex(0x0284c7);
     }
 
@@ -211,29 +185,43 @@ function setBadge(text, tone = "idle") {
   b.className = tone === "ok" ? "px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-500/25 border border-emerald-400 text-emerald-200" : tone === "busy" ? "px-3 py-1 rounded-full text-[11px] font-bold bg-amber-500/25 border border-amber-400 text-amber-200" : "px-3 py-1 rounded-full text-[11px] font-bold bg-black/65 border border-amber-400/35 text-amber-200";
 }
 
-// Settings Popover & NSFW 4-Button Toggle
-$("settingsBtn").onclick = () => $("settingsPopover").classList.toggle("hidden");
-$("flipFacingBtn").onclick = () => { baseFacing = baseFacing === 0 ? Math.PI : 0; $("settingsPopover").classList.add("hidden"); };
-$("nsfwToggleBtn").onclick = () => {
-  nsfwEnabled = !nsfwEnabled;
-  const btn = $("nsfwToggleBtn");
-  btn.textContent = nsfwEnabled ? "ON" : "OFF";
-  btn.className = nsfwEnabled
-    ? "px-2.5 py-1 rounded-full text-[10px] font-black bg-rose-500 text-white"
-    : "px-2.5 py-1 rounded-full text-[10px] font-black bg-slate-800 border border-rose-500/40 text-rose-300";
-  $("nsfwBar").classList.toggle("hidden", !nsfwEnabled);
-  $("settingsPopover").classList.add("hidden");
-  if (nsfwEnabled) setMjState("tease", "Extra studio poses unlocked, tiger...");
-};
+document.addEventListener("DOMContentLoaded", () => {
+  $("settingsBtn").onclick = () => $("settingsPopover").classList.toggle("hidden");
+  $("flipFacingBtn").onclick = () => { baseFacing = baseFacing === 0 ? Math.PI : 0; $("settingsPopover").classList.add("hidden"); };
+  $("nsfwToggleBtn").onclick = () => {
+    nsfwEnabled = !nsfwEnabled;
+    const btn = $("nsfwToggleBtn");
+    btn.textContent = nsfwEnabled ? "ON" : "OFF";
+    btn.className = nsfwEnabled ? "px-2.5 py-1 rounded-full text-[10px] font-black bg-rose-500 text-white" : "px-2.5 py-1 rounded-full text-[10px] font-black bg-slate-800 border border-rose-500/40 text-rose-300";
+    $("nsfwBar").classList.toggle("hidden", !nsfwEnabled);
+    $("settingsPopover").classList.add("hidden");
+    if (nsfwEnabled) setMjState("tease", "Extra studio poses unlocked, tiger...");
+  };
 
-$("cmdIdleBtn").onclick = () => setMjState("idle", "Chilling in the loft — ready when you are.");
-$("cmdHackBtn").onclick = () => setMjState("hack", "Terminal engaged! Typing your build...");
-$("cmdWaveBtn").onclick = () => setMjState("wave", "Hey there! Systems green.");
-$("cmdCelebrateBtn").onclick = () => setMjState("celebrate", "Woohoo! Build live on Pages!");
-$("cmdSwayBtn").onclick = () => setMjState("sway", "Feeling the vibe in the loft...");
-$("cmdKissBtn").onclick = () => setMjState("kiss", "Muah! Good luck on this deploy, tiger.");
-$("cmdKneelBtn").onclick = () => setMjState("kneel", "Striking a pose for you...");
-$("cmdTeaseBtn").onclick = () => setMjState("tease", "Like what you see? Let's ship some code.");
+  $("cmdIdleBtn").onclick = () => setMjState("idle", "Chilling in the loft — ready when you are.");
+  $("cmdHackBtn").onclick = () => setMjState("hack", "Terminal engaged! Typing your build...");
+  $("cmdWaveBtn").onclick = () => setMjState("wave", "Hey there! Systems green.");
+  $("cmdCelebrateBtn").onclick = () => setMjState("celebrate", "Woohoo! Build live on Pages!");
+  $("cmdSwayBtn").onclick = () => setMjState("sway", "Feeling the vibe in the loft...");
+  $("cmdKissBtn").onclick = () => setMjState("kiss", "Muah! Good luck on this deploy, tiger.");
+  $("cmdKneelBtn").onclick = () => setMjState("kneel", "Striking a pose for you...");
+  $("cmdTeaseBtn").onclick = () => setMjState("tease", "Like what you see? Let's ship some code.");
+
+  $("saveTokenBtn").onclick = () => { const val = $("ghToken").value.trim(); if (!val) return; localStorage.setItem(TOKEN_KEY, val); initConnection(); };
+  $("toggleTokenBtn").onclick = () => $("tokenWrap").classList.toggle("hidden");
+  $("repoSelect").onchange = loadRepoFiles;
+  $("fileSelect").onchange = () => loadFileContent($("fileSelect").value);
+  $("createFileModeBtn").onclick = () => { const fn = $("newFileName").value.trim(); if (!fn) return alert("Type filename first"); isNewFile = true; currentSha = null; $("activePathLabel").textContent = `${$("repoSelect").value}/${fn} (NEW)`; $("codeEditor").value = ""; };
+  $("pasteReplaceBtn").onclick = async () => {
+    const editor = $("codeEditor"); editor.focus();
+    try { const clip = await navigator.clipboard.readText(); if (clip) { editor.value = clip; setMjState("hack", "Clipboard pasted!"); return; } } catch {}
+    const manual = prompt("Paste your code here:");
+    if (manual !== null) { editor.value = manual; setMjState("hack", "Code loaded!"); }
+  };
+  $("copyCurrentBtn").onclick = async () => { await navigator.clipboard.writeText($("codeEditor").value); setBadge("Copied!", "ok"); };
+  $("deployBtn").onclick = deployFile;
+  if (localStorage.getItem(TOKEN_KEY)) initConnection();
+});
 
 async function initConnection() {
   const tok = localStorage.getItem(TOKEN_KEY); if (!tok) return;
@@ -299,17 +287,3 @@ $("codeEditor").addEventListener("input", () => {
   clearTimeout(typingTimer);
   typingTimer = setTimeout(() => setMjState("idle", "Ready — hit Deploy Now!"), 1800);
 });
-$("saveTokenBtn").onclick = () => { const val = $("ghToken").value.trim(); if (!val) return; localStorage.setItem(TOKEN_KEY, val); initConnection(); };
-$("toggleTokenBtn").onclick = () => $("tokenWrap").classList.toggle("hidden");
-$("repoSelect").onchange = loadRepoFiles;
-$("fileSelect").onchange = () => loadFileContent($("fileSelect").value);
-$("createFileModeBtn").onclick = () => { const fn = $("newFileName").value.trim(); if (!fn) return alert("Type filename first"); isNewFile = true; currentSha = null; $("activePathLabel").textContent = `${$("repoSelect").value}/${fn} (NEW)`; $("codeEditor").value = ""; };
-$("pasteReplaceBtn").onclick = async () => {
-  const editor = $("codeEditor"); editor.focus();
-  try { const clip = await navigator.clipboard.readText(); if (clip) { editor.value = clip; setMjState("hack", "Clipboard pasted!"); return; } } catch {}
-  const manual = prompt("Paste your code here:");
-  if (manual !== null) { editor.value = manual; setMjState("hack", "Code loaded!"); }
-};
-$("copyCurrentBtn").onclick = async () => { await navigator.clipboard.writeText($("codeEditor").value); setBadge("Copied!", "ok"); };
-$("deployBtn").onclick = deployFile;
-if (localStorage.getItem(TOKEN_KEY)) initConnection();
