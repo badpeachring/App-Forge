@@ -22,25 +22,39 @@
 </head>
 <body class="bg-[#0d0714] text-amber-50 min-h-screen p-3.5 font-sans">
   <div class="max-w-lg mx-auto space-y-3 pb-12">
+
+    <!-- 3D VRM Loft Viewport -->
     <div class="relative rounded-3xl overflow-hidden border border-rose-500/35 shadow-2xl bg-[#140b20]">
       <div class="absolute top-3 left-3 right-3 z-10 flex items-center justify-between">
         <label class="cursor-pointer bg-black/65 hover:bg-black/80 backdrop-blur-md px-3 py-1 rounded-full border border-rose-400/40 text-[10px] font-black uppercase tracking-wider text-rose-200">
-          📂 Load .VRM Avatar
+          📂 Load .VRM
           <input id="vrmFileInput" type="file" accept=".vrm,.glb" class="hidden">
         </label>
         <div id="buildBadge" class="px-3 py-1 rounded-full text-[11px] font-bold bg-black/65 backdrop-blur-md border border-amber-400/35 text-amber-200">Idle</div>
       </div>
+
       <div id="vrmPromptOverlay" class="absolute inset-0 flex flex-col items-center justify-center bg-black/45 pointer-events-none z-0 px-6 text-center">
         <div class="text-xs font-black text-rose-300 uppercase tracking-widest">No .VRM Avatar Loaded</div>
-        <div class="text-[11px] text-amber-100/80 mt-1">Tap <b>📂 Load .VRM Avatar</b> to select your downloaded file.</div>
+        <div class="text-[11px] text-amber-100/80 mt-1">Tap <b>📂 Load .VRM</b> above to load your model.</div>
       </div>
+
       <div id="stage3d" class="w-full h-64 relative"></div>
-      <div id="mjSpeech" class="px-4 py-2 bg-black/75 border-t border-rose-500/25 text-[11px] text-amber-200 flex items-center justify-between">
-        <span>💬 "Ready when you are — load your .VRM model!"</span>
+
+      <!-- Command Test Bar -->
+      <div class="grid grid-cols-4 gap-1.5 px-3 py-2 bg-black/80 border-t border-rose-500/20">
+        <button id="cmdIdleBtn" type="button" class="py-1.5 rounded-lg bg-slate-800/90 border border-rose-500/30 text-[11px] font-bold text-rose-200">😌 Idle</button>
+        <button id="cmdHackBtn" type="button" class="py-1.5 rounded-lg bg-slate-800/90 border border-sky-500/30 text-[11px] font-bold text-sky-200">💻 Hack</button>
+        <button id="cmdWaveBtn" type="button" class="py-1.5 rounded-lg bg-slate-800/90 border border-amber-500/30 text-[11px] font-bold text-amber-200">👋 Wave</button>
+        <button id="cmdCelebrateBtn" type="button" class="py-1.5 rounded-lg bg-slate-800/90 border border-emerald-500/30 text-[11px] font-bold text-emerald-200">🎉 Celebrate</button>
+      </div>
+
+      <div id="mjSpeech" class="px-4 py-2 bg-black/90 border-t border-rose-500/25 text-[11px] text-amber-200 flex items-center justify-between">
+        <span>💬 "Ready whenever you are — paste your code below!"</span>
         <span id="repoCounterPill" class="text-[10px] font-bold text-emerald-400"></span>
       </div>
     </div>
 
+    <!-- 1. GitHub Token -->
     <div class="glass-card rounded-2xl p-3.5 space-y-2">
       <div class="flex justify-between items-center">
         <span class="text-[10px] font-black uppercase tracking-widest text-amber-300">1. GitHub Token</span>
@@ -52,6 +66,7 @@
       </div>
     </div>
 
+    <!-- 2. Repo & File Selector -->
     <div class="glass-card rounded-2xl p-3.5 space-y-2.5">
       <div class="text-[10px] font-black uppercase tracking-widest text-rose-300">2. Select App Repo & File</div>
       <div class="grid grid-cols-2 gap-2">
@@ -64,6 +79,7 @@
       </div>
     </div>
 
+    <!-- 3. Code Editor & Deploy -->
     <div class="glass-card rounded-2xl p-3.5 space-y-2.5">
       <div class="flex items-center justify-between">
         <span id="activePathLabel" class="text-xs font-mono font-bold text-emerald-300 truncate">No file loaded</span>
@@ -74,7 +90,7 @@
       </div>
       <textarea id="codeEditor" rows="12" spellcheck="false" placeholder="Type or paste code here..." class="w-full bg-[#07040b] border border-rose-500/25 rounded-xl p-3 text-[11px] text-amber-100 font-mono leading-relaxed outline-none"></textarea>
       <div class="flex gap-2">
-        <input id="commitMsg" type="text" value="VRM Fix deploy" class="flex-1 bg-black/60 border border-rose-500/30 rounded-xl px-3 py-2 text-xs text-white outline-none">
+        <input id="commitMsg" type="text" value="VRM Loft Studio update" class="flex-1 bg-black/60 border border-rose-500/30 rounded-xl px-3 py-2 text-xs text-white outline-none">
         <button id="deployBtn" type="button" class="px-5 py-2.5 bg-gradient-to-r from-rose-500 via-pink-500 to-amber-500 text-white font-black rounded-xl text-xs shrink-0 shadow-lg">🚀 Deploy Now</button>
       </div>
       <a id="liveSiteLink" href="#" target="_blank" class="hidden block text-center py-2 bg-black/60 border border-emerald-500/40 rounded-xl text-xs font-bold text-emerald-300">↗ Open Live App</a>
@@ -111,11 +127,11 @@
     const w = box.clientWidth || 400, h = box.clientHeight || 256;
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x140b20);
-    scene.fog = new THREE.FogExp2(0x140b20, 0.06);
+    scene.fog = new THREE.FogExp2(0x140b20, 0.055);
 
     const cam = new THREE.PerspectiveCamera(34, w / h, 0.1, 50);
-    cam.position.set(0.25, 1.32, 2.35);
-    cam.lookAt(-0.08, 1.05, 0);
+    cam.position.set(0.18, 1.30, 2.30);
+    cam.lookAt(-0.10, 1.02, 0);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(w, h);
@@ -124,26 +140,29 @@
     renderer.toneMappingExposure = 1.15;
     box.appendChild(renderer.domElement);
 
-    scene.add(new THREE.AmbientLight(0xffedd5, 0.75));
+    scene.add(new THREE.AmbientLight(0xffedd5, 0.8));
     const keyLight = new THREE.DirectionalLight(0xfff1f2, 1.35);
     keyLight.position.set(1.5, 2.5, 2.2);
     scene.add(keyLight);
-    const crtLight = new THREE.PointLight(0x38bdf8, 1.6, 4);
-    crtLight.position.set(-0.75, 1.15, 0.45);
+    const crtLight = new THREE.PointLight(0x38bdf8, 1.8, 4);
+    crtLight.position.set(-0.72, 1.12, 0.48);
     scene.add(crtLight);
 
+    // Loft Desk, Keyboard & Glowing Terminal Monitor
     const matWood = new THREE.MeshStandardMaterial({ color: 0x4a2918, roughness: 0.55 });
-    const desk = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.06, 0.85), matWood);
-    desk.position.set(-0.82, 0.72, 0.25); scene.add(desk);
-    const monitor = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.42, 0.24), new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.3 }));
-    monitor.position.set(-0.92, 0.98, 0.18); monitor.rotation.y = 0.45; scene.add(monitor);
-    const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.44, 0.34), new THREE.MeshBasicMaterial({ color: 0x0ea5e9 }));
-    screen.position.set(-0.85, 0.98, 0.29); screen.rotation.y = 0.45; scene.add(screen);
+    const desk = new THREE.Mesh(new THREE.BoxGeometry(1.55, 0.06, 0.85), matWood);
+    desk.position.set(-0.78, 0.72, 0.25); scene.add(desk);
+    const kbd = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.02, 0.14), new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.4 }));
+    kbd.position.set(-0.48, 0.76, 0.32); kbd.rotation.y = 0.45; scene.add(kbd);
+    const monitor = new THREE.Mesh(new THREE.BoxGeometry(0.50, 0.40, 0.22), new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.3 }));
+    monitor.position.set(-0.88, 0.96, 0.18); monitor.rotation.y = 0.45; scene.add(monitor);
+    const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.32), new THREE.MeshBasicMaterial({ color: 0x0ea5e9 }));
+    screen.position.set(-0.81, 0.96, 0.28); screen.rotation.y = 0.45; scene.add(screen);
 
     const loader = new GLTFLoader();
     loader.register(parser => new VRMLoaderPlugin(parser));
 
-    async function mountVrmFromBuffer(buf) {
+    function mountVrmFromBuffer(buf) {
       const blob = new Blob([buf], { type: "application/octet-stream" });
       const url = URL.createObjectURL(blob);
       loader.load(url, gltf => {
@@ -151,13 +170,13 @@
         if (!vrm) return;
         VRMUtils.removeUnnecessaryVertices(gltf.scene);
         VRMUtils.removeUnnecessaryJoints(gltf.scene);
+        VRMUtils.rotateVRM0(vrm);
         if (currentVrm) scene.remove(currentVrm.scene);
         currentVrm = vrm;
-        vrm.scene.rotation.y = Math.PI;
-        vrm.scene.position.set(0.05, 0, 0.15);
+        vrm.scene.position.set(0.08, -0.38, 0.15);
         scene.add(vrm.scene);
         $("vrmPromptOverlay").classList.add("hidden");
-        setMjState("idle", "Avatar loaded successfully!");
+        setMjState("idle", "Avatar loaded! Use the buttons below to test poses.");
       }, undefined, err => alert("VRM Load Error: " + err.message));
     }
 
@@ -171,42 +190,96 @@
       mountVrmFromBuffer(buf);
     };
 
+    const lerp = THREE.MathUtils.lerp;
     const clock = new THREE.Clock();
+
     function animate() {
       requestAnimationFrame(animate);
       const dt = clock.getDelta();
       const t = clock.elapsedTime;
+
       if (currentVrm) {
-        const h = currentVrm.humanoid, exp = currentVrm.expressionManager;
+        const h = currentVrm.humanoid;
+        const exp = currentVrm.expressionManager;
+
+        // Blink & Facial Expressions
         if (exp) {
           const blinkCycle = t % 3.6;
           exp.setValue("blink", blinkCycle > 3.45 ? Math.sin(((blinkCycle - 3.45) / 0.15) * Math.PI) : 0);
-          exp.setValue("happy", mjMode === "idle" ? 0.35 : 0.15);
+          exp.setValue("happy", mjMode === "celebrate" ? 0.95 : mjMode === "wave" ? 0.65 : mjMode === "idle" ? 0.3 : 0.05);
         }
-        const lUpperLeg = h.getNormalizedBoneNode("leftUpperLeg"), rUpperLeg = h.getNormalizedBoneNode("rightUpperLeg");
-        const lLowerLeg = h.getNormalizedBoneNode("leftLowerLeg"), rLowerLeg = h.getNormalizedBoneNode("rightLowerLeg");
-        if (lUpperLeg && rUpperLeg) { lUpperLeg.rotation.x = 1.35; rUpperLeg.rotation.x = 1.35; }
-        if (lLowerLeg && rLowerLeg) { lLowerLeg.rotation.x = -1.35; rLowerLeg.rotation.x = -1.35; }
-        currentVrm.scene.position.y = -0.38;
 
-        const spine = h.getNormalizedBoneNode("spine"), head = h.getNormalizedBoneNode("head");
+        // Seated Lower Body
+        const lUpLeg = h.getNormalizedBoneNode("leftUpperLeg"), rUpLeg = h.getNormalizedBoneNode("rightUpperLeg");
+        const lLoLeg = h.getNormalizedBoneNode("leftLowerLeg"), rLoLeg = h.getNormalizedBoneNode("rightLowerLeg");
+        if (lUpLeg && rUpLeg) { lUpLeg.rotation.x = 1.35; rUpLeg.rotation.x = 1.35; }
+        if (lLoLeg && rLoLeg) { lLoLeg.rotation.x = -1.35; rLoLeg.rotation.x = -1.35; }
+
+        const spine = h.getNormalizedBoneNode("spine");
+        const head = h.getNormalizedBoneNode("head");
         const lArm = h.getNormalizedBoneNode("leftUpperArm"), rArm = h.getNormalizedBoneNode("rightUpperArm");
         const lFore = h.getNormalizedBoneNode("leftLowerArm"), rFore = h.getNormalizedBoneNode("rightLowerArm");
 
-        if (mjMode === "typing") {
-          currentVrm.scene.rotation.y = THREE.MathUtils.lerp(currentVrm.scene.rotation.y, Math.PI + 0.72, 0.1);
-          if (spine) spine.rotation.x = 0.12 + Math.sin(t * 12) * 0.015;
-          if (head) head.rotation.y = THREE.MathUtils.lerp(head.rotation.y, 0.18, 0.1);
-          if (lArm && rArm) { lArm.rotation.set(0.55, 0, -0.35); rArm.rotation.set(0.55, 0, 0.35); }
-          if (lFore && rFore) { lFore.rotation.x = 0.75 + Math.sin(t * 26) * 0.12; rFore.rotation.x = 0.75 + Math.cos(t * 26) * 0.12; }
-          screen.material.color.setHex(Math.sin(t * 16) > 0 ? 0x38bdf8 : 0x34d399);
+        // Normalized VRM Bone Space:
+        // Left Arm down = +Z (~1.15), forward = +X
+        // Right Arm down = -Z (~-1.15), forward = +X
+        if (mjMode === "hack") {
+          currentVrm.scene.rotation.y = lerp(currentVrm.scene.rotation.y, -0.78, 0.12);
+          if (spine) { spine.rotation.x = lerp(spine.rotation.x, 0.14 + Math.sin(t * 14) * 0.015, 0.15); spine.rotation.z = lerp(spine.rotation.z, 0, 0.15); }
+          if (head) { head.rotation.y = lerp(head.rotation.y, -0.15, 0.12); head.rotation.x = lerp(head.rotation.x, 0.08, 0.12); }
+          if (lArm && rArm) {
+            lArm.rotation.set(lerp(lArm.rotation.x, 0.62, 0.15), 0, lerp(lArm.rotation.z, 0.42, 0.15));
+            rArm.rotation.set(lerp(rArm.rotation.x, 0.62, 0.15), 0, lerp(rArm.rotation.z, -0.42, 0.15));
+          }
+          if (lFore && rFore) {
+            lFore.rotation.set(0.85 + Math.sin(t * 28) * 0.14, 0, 0.25);
+            rFore.rotation.set(0.85 + Math.cos(t * 28) * 0.14, 0, -0.25);
+          }
+          screen.material.color.setHex(Math.sin(t * 18) > 0 ? 0x38bdf8 : 0x34d399);
+          crtLight.intensity = 2.6 + Math.sin(t * 20) * 0.6;
+        } else if (mjMode === "celebrate") {
+          currentVrm.scene.rotation.y = lerp(currentVrm.scene.rotation.y, 0.18, 0.12);
+          if (spine) { spine.rotation.x = -0.05; spine.rotation.z = Math.sin(t * 8) * 0.06; }
+          if (head) { head.rotation.y = Math.sin(t * 6) * 0.12; head.rotation.x = -0.06; }
+          if (lArm && rArm) {
+            lArm.rotation.set(0.25, 0, -0.95 + Math.sin(t * 10) * 0.18);
+            rArm.rotation.set(0.25, 0, 0.95 - Math.sin(t * 10) * 0.18);
+          }
+          if (lFore && rFore) {
+            lFore.rotation.set(0.35, 0, -0.35);
+            rFore.rotation.set(0.35, 0, 0.35);
+          }
+          screen.material.color.setHex(0x10b981);
+          crtLight.intensity = 2.2;
+        } else if (mjMode === "wave") {
+          currentVrm.scene.rotation.y = lerp(currentVrm.scene.rotation.y, 0.22, 0.12);
+          if (spine) { spine.rotation.x = 0; spine.rotation.z = -0.04; }
+          if (head) { head.rotation.y = 0.12; head.rotation.z = -0.08; }
+          if (lArm && rArm) {
+            lArm.rotation.set(0.18, 0, 1.15);
+            rArm.rotation.set(0.22, 0, 0.85 + Math.sin(t * 9) * 0.25);
+          }
+          if (lFore && rFore) {
+            lFore.rotation.set(0.35, 0, 0.15);
+            rFore.rotation.set(0.4, 0, 0.45 + Math.cos(t * 9) * 0.2);
+          }
+          screen.material.color.setHex(0x0ea5e9);
+          crtLight.intensity = 1.6;
         } else {
-          currentVrm.scene.rotation.y = THREE.MathUtils.lerp(currentVrm.scene.rotation.y, Math.PI - 0.18, 0.06);
-          if (spine) spine.rotation.x = Math.sin(t * 2) * 0.025;
-          if (head) head.rotation.y = Math.sin(t * 1.1) * 0.08;
-          if (lArm && rArm) { lArm.rotation.set(0.15, 0, -1.15); rArm.rotation.set(0.15, 0, 1.15); }
-          if (lFore && rFore) { lFore.rotation.x = 0.25; rFore.rotation.x = 0.25; }
+          // Relaxed Idle Pose (Arms naturally down at sides/lap)
+          currentVrm.scene.rotation.y = lerp(currentVrm.scene.rotation.y, 0.22, 0.08);
+          if (spine) { spine.rotation.x = lerp(spine.rotation.x, Math.sin(t * 2) * 0.025, 0.1); spine.rotation.z = lerp(spine.rotation.z, 0, 0.1); }
+          if (head) { head.rotation.y = lerp(head.rotation.y, 0.08 + Math.sin(t * 1.1) * 0.07, 0.1); head.rotation.x = lerp(head.rotation.x, 0, 0.1); head.rotation.z = lerp(head.rotation.z, 0, 0.1); }
+          if (lArm && rArm) {
+            lArm.rotation.set(lerp(lArm.rotation.x, 0.22, 0.12), 0, lerp(lArm.rotation.z, 1.12, 0.12));
+            rArm.rotation.set(lerp(rArm.rotation.x, 0.22, 0.12), 0, lerp(rArm.rotation.z, -1.12, 0.12));
+          }
+          if (lFore && rFore) {
+            lFore.rotation.set(lerp(lFore.rotation.x, 0.38, 0.12), 0, lerp(lFore.rotation.z, 0.18, 0.12));
+            rFore.rotation.set(lerp(rFore.rotation.x, 0.38, 0.12), 0, lerp(rFore.rotation.z, -0.18, 0.12));
+          }
           screen.material.color.setHex(0x0284c7);
+          crtLight.intensity = 1.6;
         }
         currentVrm.update(dt);
       }
@@ -218,6 +291,11 @@
       mjMode = mode;
       if (text) $("mjSpeech").firstElementChild.textContent = `💬 "${text}"`;
     }
+
+    $("cmdIdleBtn").onclick = () => setMjState("idle", "Chilling in the loft — ready for your next command.");
+    $("cmdHackBtn").onclick = () => setMjState("hack", "Terminal engaged! Running rapid keystrokes...");
+    $("cmdWaveBtn").onclick = () => setMjState("wave", "Hey there! Systems are green and standing by.");
+    $("cmdCelebrateBtn").onclick = () => setMjState("celebrate", "Woohoo! Build deployed and live on Pages!");
 
     function setBadge(text, tone = "idle") {
       const b = $("buildBadge"); b.textContent = text;
@@ -250,57 +328,4 @@
 
     async function loadFileContent(path) {
       const repo = $("repoSelect").value; isNewFile = false; $("activePathLabel").textContent = `${repo}/${path}`; setBadge("Loading...", "busy");
-      const res = await fetch(`https://api.github.com/repos/${ghUser}/${repo}/contents/${path}`, { headers: getHeaders() });
-      const data = await res.json(); currentSha = data.sha;
-      const bytes = Uint8Array.from(atob(data.content.replace(/\n/g, "")), c => c.charCodeAt(0));
-      $("codeEditor").value = new TextDecoder().decode(bytes); setBadge("Ready", "ok");
-    }
-
-    async function deployFile() {
-      const repo = $("repoSelect").value, path = isNewFile ? $("newFileName").value.trim() : $("fileSelect").value;
-      if (!repo || !path) return alert("Select or name a file first.");
-      const encoded = btoa(String.fromCharCode(...new TextEncoder().encode($("codeEditor").value)));
-      setBadge("Deploying...", "busy");
-      setMjState("typing", `Deploying ${path}...`);
-      const body = { message: $("commitMsg").value.trim() || `Update ${path}`, content: encoded };
-      if (!isNewFile && currentSha) body.sha = currentSha;
-      const res = await fetch(`https://api.github.com/repos/${ghUser}/${repo}/contents/${path}`, { method: "PUT", headers: getHeaders(), body: JSON.stringify(body) });
-      if (!res.ok) { const err = await res.json(); setBadge("Deploy Failed"); setMjState("idle", "Deploy failed."); return alert("API Error: " + (err.message || res.status)); }
-      const out = await res.json(); currentSha = out.content.sha; isNewFile = false; $("activePathLabel").textContent = `${repo}/${path}`;
-      setBadge("Building Pages...", "busy");
-      pollPagesStatus(repo);
-    }
-
-    async function pollPagesStatus(repo) {
-      for (let i = 0; i < 18; i++) {
-        await new Promise(r => setTimeout(r, 4000));
-        try {
-          const res = await fetch(`https://api.github.com/repos/${ghUser}/${repo}/pages/builds/latest`, { headers: getHeaders() });
-          if (res.ok) {
-            const b = await res.json();
-            if (b.status === "built") { setBadge("🟢 Live on Pages!", "ok"); setMjState("idle", `${repo} is live!`); return; }
-            if (b.status === "errored") { setBadge("🔴 Build Error"); setMjState("idle", "Build error."); return; }
-          }
-        } catch {}
-      }
-      setBadge("🟢 Pushed to Main", "ok");
-      setMjState("idle", "Pushed to main!");
-    }
-
-    $("codeEditor").addEventListener("input", () => {
-      setMjState("typing", "Typing edits into terminal...");
-      clearTimeout(typingTimer);
-      typingTimer = setTimeout(() => setMjState("idle", "Ready — hit Deploy Now!"), 1800);
-    });
-    $("saveTokenBtn").onclick = () => { const val = $("ghToken").value.trim(); if (!val) return; localStorage.setItem(TOKEN_KEY, val); initConnection(); };
-    $("toggleTokenBtn").onclick = () => $("tokenWrap").classList.toggle("hidden");
-    $("repoSelect").onchange = loadRepoFiles;
-    $("fileSelect").onchange = () => loadFileContent($("fileSelect").value);
-    $("createFileModeBtn").onclick = () => { const fn = $("newFileName").value.trim(); if (!fn) return alert("Type filename first"); isNewFile = true; currentSha = null; $("activePathLabel").textContent = `${$("repoSelect").value}/${fn} (NEW)`; $("codeEditor").value = ""; };
-    $("pasteReplaceBtn").onclick = async () => { try { const clip = await navigator.clipboard.readText(); if (clip) { $("codeEditor").value = clip; setMjState("typing", "Clipboard loaded!"); } } catch {} };
-    $("copyCurrentBtn").onclick = async () => { await navigator.clipboard.writeText($("codeEditor").value); setBadge("Copied!", "ok"); };
-    $("deployBtn").onclick = deployFile;
-    initConnection();
-  </script>
-</body>
-</html>
+      const res = await fetch(`https://api.github.com/repos/${ghUser}/${repo}/contents/${path}`, {
