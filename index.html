@@ -22,8 +22,6 @@
 </head>
 <body class="bg-[#0d0714] text-amber-50 min-h-screen p-3.5 font-sans">
   <div class="max-w-lg mx-auto space-y-3 pb-12">
-
-    <!-- 3D VRM Loft Viewport -->
     <div class="relative rounded-3xl overflow-hidden border border-rose-500/35 shadow-2xl bg-[#140b20]">
       <div class="absolute top-3 left-3 right-3 z-10 flex items-center justify-between">
         <label class="cursor-pointer bg-black/65 hover:bg-black/80 backdrop-blur-md px-3 py-1 rounded-full border border-rose-400/40 text-[10px] font-black uppercase tracking-wider text-rose-200">
@@ -32,25 +30,20 @@
         </label>
         <div id="buildBadge" class="px-3 py-1 rounded-full text-[11px] font-bold bg-black/65 backdrop-blur-md border border-amber-400/35 text-amber-200">Idle</div>
       </div>
-
-      <!-- Empty VRM Drop Prompt Overlay (Hides once VRM loads) -->
       <div id="vrmPromptOverlay" class="absolute inset-0 flex flex-col items-center justify-center bg-black/45 pointer-events-none z-0 px-6 text-center">
         <div class="text-xs font-black text-rose-300 uppercase tracking-widest">No .VRM Avatar Loaded</div>
-        <div class="text-[11px] text-amber-100/80 mt-1">Tap <b>📂 Load .VRM Avatar</b> above to select any downloaded VRM model (cached offline in IndexedDB), or upload <code>mj.vrm</code> to this repo.</div>
+        <div class="text-[11px] text-amber-100/80 mt-1">Tap <b>📂 Load .VRM Avatar</b> to select your downloaded file.</div>
       </div>
-
       <div id="stage3d" class="w-full h-64 relative"></div>
-
       <div id="mjSpeech" class="px-4 py-2 bg-black/75 border-t border-rose-500/25 text-[11px] text-amber-200 flex items-center justify-between">
-        <span>💬 "Ready when you are — load a .VRM model or deploy code below."</span>
+        <span>💬 "Ready when you are — load your .VRM model!"</span>
         <span id="repoCounterPill" class="text-[10px] font-bold text-emerald-400"></span>
       </div>
     </div>
 
-    <!-- 1. GitHub Token -->
     <div class="glass-card rounded-2xl p-3.5 space-y-2">
       <div class="flex justify-between items-center">
-        <span class="text-[10px] font-black uppercase tracking-widest text-amber-300">1. GitHub API Token</span>
+        <span class="text-[10px] font-black uppercase tracking-widest text-amber-300">1. GitHub Token</span>
         <button id="toggleTokenBtn" type="button" class="text-[11px] text-rose-300/70 underline">Show / Edit</button>
       </div>
       <div id="tokenWrap" class="flex gap-2">
@@ -59,7 +52,6 @@
       </div>
     </div>
 
-    <!-- 2. Repo & File Selector -->
     <div class="glass-card rounded-2xl p-3.5 space-y-2.5">
       <div class="text-[10px] font-black uppercase tracking-widest text-rose-300">2. Select App Repo & File</div>
       <div class="grid grid-cols-2 gap-2">
@@ -67,12 +59,11 @@
         <select id="fileSelect" class="bg-black/60 border border-rose-500/30 rounded-xl px-2.5 py-2 text-xs text-white outline-none"></select>
       </div>
       <div class="flex gap-2">
-        <input id="newFileName" type="text" placeholder="Or new filename (e.g. patch-fix.js)" class="flex-1 bg-black/60 border border-rose-500/30 rounded-xl px-3 py-1.5 text-xs text-white outline-none">
+        <input id="newFileName" type="text" placeholder="Or new filename" class="flex-1 bg-black/60 border border-rose-500/30 rounded-xl px-3 py-1.5 text-xs text-white outline-none">
         <button id="createFileModeBtn" type="button" class="px-3.5 py-1.5 bg-rose-500/20 border border-rose-500/40 text-rose-200 font-bold rounded-xl text-xs">+ New</button>
       </div>
     </div>
 
-    <!-- 3. Code Editor & Deploy -->
     <div class="glass-card rounded-2xl p-3.5 space-y-2.5">
       <div class="flex items-center justify-between">
         <span id="activePathLabel" class="text-xs font-mono font-bold text-emerald-300 truncate">No file loaded</span>
@@ -83,7 +74,7 @@
       </div>
       <textarea id="codeEditor" rows="12" spellcheck="false" placeholder="Type or paste code here..." class="w-full bg-[#07040b] border border-rose-500/25 rounded-xl p-3 text-[11px] text-amber-100 font-mono leading-relaxed outline-none"></textarea>
       <div class="flex gap-2">
-        <input id="commitMsg" type="text" value="VRM Loft Studio deploy" class="flex-1 bg-black/60 border border-rose-500/30 rounded-xl px-3 py-2 text-xs text-white outline-none">
+        <input id="commitMsg" type="text" value="VRM Fix deploy" class="flex-1 bg-black/60 border border-rose-500/30 rounded-xl px-3 py-2 text-xs text-white outline-none">
         <button id="deployBtn" type="button" class="px-5 py-2.5 bg-gradient-to-r from-rose-500 via-pink-500 to-amber-500 text-white font-black rounded-xl text-xs shrink-0 shadow-lg">🚀 Deploy Now</button>
       </div>
       <a id="liveSiteLink" href="#" target="_blank" class="hidden block text-center py-2 bg-black/60 border border-emerald-500/40 rounded-xl text-xs font-bold text-emerald-300">↗ Open Live App</a>
@@ -101,7 +92,6 @@
     const $ = id => document.getElementById(id);
     const getHeaders = () => ({ "Authorization": `Bearer ${localStorage.getItem(TOKEN_KEY) || ""}`, "Accept": "application/vnd.github+json", "Content-Type": "application/json" });
 
-    // --- IndexedDB Storage for Offline VRM Binary ---
     function saveVrmBuffer(buf) {
       return new Promise(res => {
         const req = indexedDB.open("AppForgeVrmDB", 1);
@@ -117,7 +107,6 @@
       });
     }
 
-    // --- Three.js + @pixiv/three-vrm Engine ---
     const box = $("stage3d");
     const w = box.clientWidth || 400, h = box.clientHeight || 256;
     const scene = new THREE.Scene();
@@ -135,7 +124,6 @@
     renderer.toneMappingExposure = 1.15;
     box.appendChild(renderer.domElement);
 
-    // Studio Lighting (Key, Warm Loft Lamp, Cyan CRT Rim)
     scene.add(new THREE.AmbientLight(0xffedd5, 0.75));
     const keyLight = new THREE.DirectionalLight(0xfff1f2, 1.35);
     keyLight.position.set(1.5, 2.5, 2.2);
@@ -144,7 +132,6 @@
     crtLight.position.set(-0.75, 1.15, 0.45);
     scene.add(crtLight);
 
-    // Loft Desk & Glowing Monitor
     const matWood = new THREE.MeshStandardMaterial({ color: 0x4a2918, roughness: 0.55 });
     const desk = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.06, 0.85), matWood);
     desk.position.set(-0.82, 0.72, 0.25); scene.add(desk);
@@ -156,8 +143,9 @@
     const loader = new GLTFLoader();
     loader.register(parser => new VRMLoaderPlugin(parser));
 
-    async function mountVrmFromUrlOrBuffer(source) {
-      const url = source instanceof ArrayBuffer ? URL.createObjectURL(new Blob([source])) : source;
+    async function mountVrmFromBuffer(buf) {
+      const blob = new Blob([buf], { type: "application/octet-stream" });
+      const url = URL.createObjectURL(blob);
       loader.load(url, gltf => {
         const vrm = gltf.userData.vrm;
         if (!vrm) return;
@@ -165,71 +153,52 @@
         VRMUtils.removeUnnecessaryJoints(gltf.scene);
         if (currentVrm) scene.remove(currentVrm.scene);
         currentVrm = vrm;
-        vrm.scene.rotation.y = Math.PI; // VRM 0.x faces -Z; rotate to camera
+        vrm.scene.rotation.y = Math.PI;
         vrm.scene.position.set(0.05, 0, 0.15);
         scene.add(vrm.scene);
         $("vrmPromptOverlay").classList.add("hidden");
-        setMjState("idle", "3D VRM Avatar online — ready to deploy!");
-      });
+        setMjState("idle", "Avatar loaded successfully!");
+      }, undefined, err => alert("VRM Load Error: " + err.message));
     }
 
-    // Auto-load from IndexedDB or repo mj.vrm
-    loadVrmBuffer().then(buf => {
-      if (buf) mountVrmFromUrlOrBuffer(buf);
-      else fetch("mj.vrm").then(r => { if (r.ok) mountVrmFromUrlOrBuffer("mj.vrm"); }).catch(() => {});
-    });
+    loadVrmBuffer().then(buf => { if (buf) mountVrmFromBuffer(buf); });
 
     $("vrmFileInput").onchange = async e => {
       const file = e.target.files?.[0];
       if (!file) return;
       const buf = await file.arrayBuffer();
       await saveVrmBuffer(buf);
-      mountVrmFromUrlOrBuffer(buf);
+      mountVrmFromBuffer(buf);
     };
 
-    // Procedural Humanoid Bone Animation Loop (Idle, Blink, Typing at Desk)
     const clock = new THREE.Clock();
     function animate() {
       requestAnimationFrame(animate);
       const dt = clock.getDelta();
       const t = clock.elapsedTime;
-
       if (currentVrm) {
-        const h = currentVrm.humanoid;
-        const exp = currentVrm.expressionManager;
-
-        // Auto Eye Blink every ~3.5s
+        const h = currentVrm.humanoid, exp = currentVrm.expressionManager;
         if (exp) {
           const blinkCycle = t % 3.6;
           exp.setValue("blink", blinkCycle > 3.45 ? Math.sin(((blinkCycle - 3.45) / 0.15) * Math.PI) : 0);
           exp.setValue("happy", mjMode === "idle" ? 0.35 : 0.15);
         }
-
-        // Seated Pose + Typing IK Approximation
-        const lUpperLeg = h.getNormalizedBoneNode("leftUpperLeg");
-        const rUpperLeg = h.getNormalizedBoneNode("rightUpperLeg");
-        const lLowerLeg = h.getNormalizedBoneNode("leftLowerLeg");
-        const rLowerLeg = h.getNormalizedBoneNode("rightLowerLeg");
+        const lUpperLeg = h.getNormalizedBoneNode("leftUpperLeg"), rUpperLeg = h.getNormalizedBoneNode("rightUpperLeg");
+        const lLowerLeg = h.getNormalizedBoneNode("leftLowerLeg"), rLowerLeg = h.getNormalizedBoneNode("rightLowerLeg");
         if (lUpperLeg && rUpperLeg) { lUpperLeg.rotation.x = 1.35; rUpperLeg.rotation.x = 1.35; }
         if (lLowerLeg && rLowerLeg) { lLowerLeg.rotation.x = -1.35; rLowerLeg.rotation.x = -1.35; }
         currentVrm.scene.position.y = -0.38;
 
-        const spine = h.getNormalizedBoneNode("spine");
-        const head = h.getNormalizedBoneNode("head");
-        const lArm = h.getNormalizedBoneNode("leftUpperArm");
-        const rArm = h.getNormalizedBoneNode("rightUpperArm");
-        const lFore = h.getNormalizedBoneNode("leftLowerArm");
-        const rFore = h.getNormalizedBoneNode("rightLowerArm");
+        const spine = h.getNormalizedBoneNode("spine"), head = h.getNormalizedBoneNode("head");
+        const lArm = h.getNormalizedBoneNode("leftUpperArm"), rArm = h.getNormalizedBoneNode("rightUpperArm");
+        const lFore = h.getNormalizedBoneNode("leftLowerArm"), rFore = h.getNormalizedBoneNode("rightLowerArm");
 
         if (mjMode === "typing") {
           currentVrm.scene.rotation.y = THREE.MathUtils.lerp(currentVrm.scene.rotation.y, Math.PI + 0.72, 0.1);
           if (spine) spine.rotation.x = 0.12 + Math.sin(t * 12) * 0.015;
           if (head) head.rotation.y = THREE.MathUtils.lerp(head.rotation.y, 0.18, 0.1);
           if (lArm && rArm) { lArm.rotation.set(0.55, 0, -0.35); rArm.rotation.set(0.55, 0, 0.35); }
-          if (lFore && rFore) {
-            lFore.rotation.x = 0.75 + Math.sin(t * 26) * 0.12;
-            rFore.rotation.x = 0.75 + Math.cos(t * 26) * 0.12;
-          }
+          if (lFore && rFore) { lFore.rotation.x = 0.75 + Math.sin(t * 26) * 0.12; rFore.rotation.x = 0.75 + Math.cos(t * 26) * 0.12; }
           screen.material.color.setHex(Math.sin(t * 16) > 0 ? 0x38bdf8 : 0x34d399);
         } else {
           currentVrm.scene.rotation.y = THREE.MathUtils.lerp(currentVrm.scene.rotation.y, Math.PI - 0.18, 0.06);
@@ -245,18 +214,14 @@
     }
     animate();
 
-    function setMjState(mode, speechText) {
+    function setMjState(mode, text) {
       mjMode = mode;
-      if (speechText) $("mjSpeech").firstElementChild.textContent = `💬 "${speechText}"`;
+      if (text) $("mjSpeech").firstElementChild.textContent = `💬 "${text}"`;
     }
 
     function setBadge(text, tone = "idle") {
       const b = $("buildBadge"); b.textContent = text;
-      b.className = tone === "ok"
-        ? "px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-500/25 border border-emerald-400 text-emerald-200"
-        : tone === "busy"
-        ? "px-3 py-1 rounded-full text-[11px] font-bold bg-amber-500/25 border border-amber-400 text-amber-200"
-        : "px-3 py-1 rounded-full text-[11px] font-bold bg-black/65 border border-amber-400/35 text-amber-200";
+      b.className = tone === "ok" ? "px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-500/25 border border-emerald-400 text-emerald-200" : tone === "busy" ? "px-3 py-1 rounded-full text-[11px] font-bold bg-amber-500/25 border border-amber-400 text-amber-200" : "px-3 py-1 rounded-full text-[11px] font-bold bg-black/65 border border-amber-400/35 text-amber-200";
     }
 
     async function initConnection() {
@@ -296,11 +261,11 @@
       if (!repo || !path) return alert("Select or name a file first.");
       const encoded = btoa(String.fromCharCode(...new TextEncoder().encode($("codeEditor").value)));
       setBadge("Deploying...", "busy");
-      setMjState("typing", `Turning to terminal and deploying ${path}...`);
+      setMjState("typing", `Deploying ${path}...`);
       const body = { message: $("commitMsg").value.trim() || `Update ${path}`, content: encoded };
       if (!isNewFile && currentSha) body.sha = currentSha;
       const res = await fetch(`https://api.github.com/repos/${ghUser}/${repo}/contents/${path}`, { method: "PUT", headers: getHeaders(), body: JSON.stringify(body) });
-      if (!res.ok) { const err = await res.json(); setBadge("Deploy Failed"); setMjState("idle", "Commit failed — check alert."); return alert("GitHub API Error: " + (err.message || res.status)); }
+      if (!res.ok) { const err = await res.json(); setBadge("Deploy Failed"); setMjState("idle", "Deploy failed."); return alert("API Error: " + (err.message || res.status)); }
       const out = await res.json(); currentSha = out.content.sha; isNewFile = false; $("activePathLabel").textContent = `${repo}/${path}`;
       setBadge("Building Pages...", "busy");
       pollPagesStatus(repo);
@@ -313,8 +278,8 @@
           const res = await fetch(`https://api.github.com/repos/${ghUser}/${repo}/pages/builds/latest`, { headers: getHeaders() });
           if (res.ok) {
             const b = await res.json();
-            if (b.status === "built") { setBadge("🟢 Live on Pages!", "ok"); setMjState("idle", `${repo} is live on GitHub Pages!`); return; }
-            if (b.status === "errored") { setBadge("🔴 Build Error"); setMjState("idle", "GitHub Pages build error."); return; }
+            if (b.status === "built") { setBadge("🟢 Live on Pages!", "ok"); setMjState("idle", `${repo} is live!`); return; }
+            if (b.status === "errored") { setBadge("🔴 Build Error"); setMjState("idle", "Build error."); return; }
           }
         } catch {}
       }
