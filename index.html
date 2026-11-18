@@ -3,111 +3,240 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#020617">
-  <title>App Forge • Mobile GitHub Deployer</title>
+  <meta name="theme-color" content="#140e1a">
+  <link rel="manifest" href="manifest.json">
+  <title>App Forge • Cozy Loft Studio</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes floatSlow { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-3px); } }
+    @keyframes typeLeft { 0%, 100% { transform: rotate(0deg) translateY(0); } 50% { transform: rotate(-14deg) translateY(-3px); } }
+    @keyframes typeRight { 0%, 100% { transform: rotate(0deg) translateY(-2px); } 50% { transform: rotate(14deg) translateY(1px); } }
+    @keyframes screenPulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 0.9; } }
+    @keyframes steamRise { 0% { opacity: 0; transform: translateY(0) scale(0.8); } 50% { opacity: 0.6; } 100% { opacity: 0; transform: translateY(-14px) scale(1.2); } }
+    .mj-wrap { transition: transform 0.85s cubic-bezier(0.22, 1, 0.36, 1); }
+    .mj-idle { transform: translateX(0px); animation: floatSlow 3.2s ease-in-out infinite; }
+    .mj-desk { transform: translateX(88px); }
+    .mj-typing .arm-l { transform-origin: 48px 92px; animation: typeLeft 0.22s infinite; }
+    .mj-typing .arm-r { transform-origin: 64px 92px; animation: typeRight 0.22s infinite; }
+    .screen-glow { animation: screenPulse 2.4s ease-in-out infinite; }
+    .steam-1 { animation: steamRise 2.8s ease-out infinite; }
+    .steam-2 { animation: steamRise 2.8s ease-out 1.2s infinite; }
+  </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen p-4 font-sans">
+<body class="bg-[#120d18] text-amber-50 min-h-screen p-3.5 font-sans">
   <div class="max-w-lg mx-auto space-y-3 pb-12">
-    <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-      <div>
-        <div class="text-[10px] font-black uppercase tracking-widest text-emerald-400">Mobile Dev Studio</div>
-        <h1 class="text-xl font-black text-white">⚡ APP FORGE DEPLOYER</h1>
+
+    <!-- Cozy Tucked-Away Loft Viewport -->
+    <div class="relative rounded-3xl overflow-hidden border border-amber-500/30 shadow-2xl bg-gradient-to-b from-[#1e152b] via-[#281929] to-[#1a111b]">
+      <!-- Top HUD Overlay -->
+      <div class="absolute top-3 left-3.5 right-3.5 z-10 flex items-center justify-between">
+        <div class="bg-black/45 backdrop-blur-md px-3 py-1 rounded-full border border-amber-400/25">
+          <span class="text-[10px] font-black uppercase tracking-widest text-amber-300">✦ Cozy Loft Studio</span>
+        </div>
+        <div id="buildBadge" class="px-3 py-1 rounded-full text-[11px] font-bold bg-black/55 backdrop-blur-md border border-amber-400/30 text-amber-200">Idle in Loft</div>
       </div>
-      <div id="buildBadge" class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-900 border border-slate-700 text-slate-400">Idle</div>
+
+      <!-- Illustrated Loft Scene SVG -->
+      <svg viewBox="0 0 420 195" class="w-full h-48 block select-none">
+        <defs>
+          <linearGradient id="nightSky" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#0f172a"/><stop offset="100%" stop-color="#311042"/>
+          </linearGradient>
+          <radialGradient id="lampGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#fbbf24" stop-opacity="0.45"/><stop offset="100%" stop-color="#fbbf24" stop-opacity="0"/>
+          </radialGradient>
+          <radialGradient id="crtGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.55"/><stop offset="100%" stop-color="#38bdf8" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+
+        <!-- Slanted Attic Roof Beams & Warm Brick Wall -->
+        <polygon points="0,52 130,0 420,0 420,195 0,195" fill="#231624"/>
+        <line x1="0" y1="54" x2="134" y2="0" stroke="#3f2321" stroke-width="10"/>
+        <line x1="0" y1="168" x2="420" y2="168" stroke="#3b211e" stroke-width="6"/>
+        <rect x="0" y="168" width="420" height="27" fill="#1b0f14"/>
+
+        <!-- Tucked-Away Loft Window (City Night + Stars + Fairy Lights) -->
+        <g transform="translate(26, 36)">
+          <rect x="0" y="0" width="96" height="82" rx="8" fill="url(#nightSky)" stroke="#5c3630" stroke-width="4"/>
+          <circle cx="20" cy="18" r="1.3" fill="#fef08a"/><circle cx="72" cy="14" r="1.5" fill="#bae6fd"/><circle cx="52" cy="24" r="1" fill="#fff"/>
+          <!-- City Skyline Silhouette -->
+          <rect x="8" y="46" width="16" height="34" fill="#1e1b4b"/><rect x="28" y="34" width="20" height="46" fill="#172554"/><rect x="54" y="42" width="18" height="38" fill="#1e1b4b"/><rect x="75" y="50" width="15" height="30" fill="#0f172a"/>
+          <rect x="33" y="42" width="3" height="3" fill="#fde047"/><rect x="40" y="52" width="3" height="3" fill="#fde047"/><rect x="60" y="48" width="3" height="3" fill="#38bdf8"/>
+          <line x1="48" y1="0" x2="48" y2="82" stroke="#5c3630" stroke-width="3"/>
+          <line x1="0" y1="41" x2="96" y2="41" stroke="#5c3630" stroke-width="3"/>
+          <!-- Hanging Potted Vine -->
+          <path d="M84,2 Q92,18 82,32 M86,4 Q76,20 88,36" stroke="#34d399" stroke-width="2" fill="none"/>
+          <circle cx="82" cy="32" r="3" fill="#10b981"/><circle cx="88" cy="36" r="2.5" fill="#34d399"/>
+        </g>
+
+        <!-- String Fairy Lights Along Ceiling -->
+        <path d="M125,14 Q210,34 295,12 Q355,28 415,10" stroke="#78350f" stroke-width="1.5" fill="none"/>
+        <circle cx="155" cy="21" r="2.5" fill="#fde047"/><circle cx="210" cy="24" r="2.5" fill="#fb7185"/><circle cx="265" cy="19" r="2.5" fill="#fde047"/><circle cx="335" cy="20" r="2.5" fill="#38bdf8"/><circle cx="385" cy="16" r="2.5" fill="#fde047"/>
+
+        <!-- Wall Bookshelf & Spider-Web Vinyl Decor -->
+        <rect x="155" y="44" width="76" height="5" rx="2" fill="#5c3630"/>
+        <rect x="162" y="26" width="7" height="18" rx="1" fill="#e11d48"/><rect x="170" y="28" width="6" height="16" rx="1" fill="#0284c7"/><rect x="177" y="25" width="8" height="19" rx="1" fill="#d97706"/>
+        <circle cx="212" cy="34" r="9" fill="#0f172a" stroke="#64748b" stroke-width="1.5"/><circle cx="212" cy="34" r="3" fill="#f43f5e"/>
+
+        <!-- Warm Desk Lamp & Ambient Glow -->
+        <circle cx="355" cy="84" r="65" fill="url(#lampGlow)"/>
+        <path d="M368,124 L374,84 L354,74" stroke="#d97706" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <polygon points="344,78 362,68 366,82" fill="#f59e0b"/>
+
+        <!-- Cozy Wooden Computer Desk (Right Side) -->
+        <rect x="242" y="124" width="144" height="8" rx="3" fill="#7c4a32"/>
+        <rect x="252" y="132" width="8" height="36" fill="#5c3630"/><rect x="368" y="132" width="8" height="36" fill="#5c3630"/>
+
+        <!-- Cute Retro-Modern Mini Computer + Glowing Monitor -->
+        <circle cx="315" cy="96" r="46" fill="url(#crtGlow)" class="screen-glow"/>
+        <!-- Monitor Stand & Bezel -->
+        <rect x="307" y="114" width="16" height="10" fill="#cbd5e1"/>
+        <rect x="298" y="121" width="34" height="3" rx="1.5" fill="#94a3b8"/>
+        <rect x="285" y="74" width="60" height="42" rx="7" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+        <rect x="290" y="79" width="50" height="32" rx="4" fill="#0f172a"/>
+        <!-- Code Lines Inside Screen -->
+        <line x1="295" y1="86" x2="318" y2="86" stroke="#34d399" stroke-width="2.2" stroke-linecap="round"/>
+        <line x1="295" y1="92" x2="332" y2="92" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round"/>
+        <line x1="295" y1="98" x2="324" y2="98" stroke="#f472b6" stroke-width="2.2" stroke-linecap="round"/>
+        <line id="screenProgress" x1="295" y1="104" x2="306" y2="104" stroke="#fbbf24" stroke-width="2.5" stroke-linecap="round"/>
+        <!-- Cute Mechanical Keyboard & Steaming Mug -->
+        <rect x="266" y="120" width="32" height="4" rx="2" fill="#e2e8f0"/>
+        <rect x="344" y="113" width="11" height="11" rx="2" fill="#fb7185"/>
+        <path d="M348,110 Q346,104 350,100" stroke="#fde68a" stroke-width="1.5" fill="none" class="steam-1"/>
+        <path d="M352,110 Q355,104 351,99" stroke="#fde68a" stroke-width="1.5" fill="none" class="steam-2"/>
+
+        <!-- Swivel Chair at Desk -->
+        <rect x="224" y="138" width="26" height="6" rx="3" fill="#be123c"/>
+        <rect x="222" y="114" width="6" height="26" rx="3" fill="#9f1239"/>
+        <line x1="237" y1="144" x2="237" y2="164" stroke="#64748b" stroke-width="3"/>
+        <line x1="227" y1="165" x2="247" y2="165" stroke="#64748b" stroke-width="3" stroke-linecap="round"/>
+
+        <!-- Animated Red-Haired Mary Jane Character -->
+        <g id="mjCharacter" class="mj-wrap mj-idle" transform="translate(132, 34)">
+          <!-- Flowing Auburn-Red Hair Back -->
+          <path d="M40,26 C26,32 24,58 30,74 C36,78 44,72 46,60 Z" fill="#b91c1c"/>
+          <path d="M62,24 C76,32 78,56 70,72 C64,76 58,70 56,58 Z" fill="#dc2626"/>
+          <!-- Torso (Cozy Cropped Spider-Heart Sweater) -->
+          <path d="M43,54 L63,54 L66,86 L40,86 Z" rx="6" fill="#1e293b"/>
+          <circle cx="53" cy="68" r="4" fill="#f43f5e"/>
+          <!-- High-Waisted Denim Jeans & Boots -->
+          <rect x="42" y="85" width="9" height="36" rx="4" fill="#2563eb"/>
+          <rect x="54" y="85" width="9" height="36" rx="4" fill="#1d4ed8"/>
+          <rect x="41" y="119" width="11" height="8" rx="3" fill="#0f172a"/>
+          <rect x="54" y="119" width="11" height="8" rx="3" fill="#0f172a"/>
+          <!-- Head & Face -->
+          <circle cx="53" cy="36" r="14" fill="#fed7aa"/>
+          <!-- Side-Swept Auburn Bangs -->
+          <path d="M39,34 C39,20 67,20 67,34 C62,27 52,27 45,35 Z" fill="#dc2626"/>
+          <!-- Expressive Green Eyes & Smile -->
+          <circle cx="49" cy="37" r="1.8" fill="#10b981"/>
+          <circle cx="58" cy="37" r="1.8" fill="#10b981"/>
+          <path d="M50,43 Q53.5,46 57,43" stroke="#be123c" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+          <!-- Animated Arms -->
+          <path class="arm-l" d="M43,58 L35,82 L44,86" stroke="#fed7aa" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <path class="arm-r" d="M63,58 L74,78 L86,82" stroke="#fed7aa" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </g>
+      </svg>
+
+      <!-- Live Loft Speech Bubble -->
+      <div id="mjSpeech" class="px-4 py-2 bg-black/50 border-t border-amber-500/20 text-[11px] text-amber-200 flex items-center justify-between">
+        <span>💬 "Ready whenever you are, tiger — paste your code below!"</span>
+        <span id="repoCounterPill" class="text-[10px] font-bold text-emerald-400"></span>
+      </div>
     </div>
 
     <!-- 1. GitHub Token Connection -->
-    <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 space-y-2">
+    <div class="bg-[#1b1324]/95 border border-amber-500/20 rounded-2xl p-3.5 space-y-2">
       <div class="flex justify-between items-center">
-        <span class="text-[11px] font-bold uppercase text-sky-400">1. GitHub API Token (Stored Locally)</span>
-        <button id="toggleTokenBtn" type="button" class="text-[11px] text-slate-400 underline">Show / Edit</button>
+        <span class="text-[11px] font-bold uppercase text-amber-300">1. GitHub API Token (Stored Locally)</span>
+        <button id="toggleTokenBtn" type="button" class="text-[11px] text-amber-200/70 underline">Show / Edit</button>
       </div>
       <div id="tokenWrap" class="flex gap-2">
-        <input id="ghToken" type="password" placeholder="Paste github_pat_... token" class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white outline-none">
-        <button id="saveTokenBtn" type="button" class="px-3.5 py-2 bg-sky-500 text-slate-950 font-black rounded-lg text-xs">Connect</button>
+        <input id="ghToken" type="password" placeholder="Paste github_pat_... token" class="flex-1 bg-[#110b17] border border-amber-500/30 rounded-lg px-3 py-2 text-xs text-white outline-none">
+        <button id="saveTokenBtn" type="button" class="px-3.5 py-2 bg-amber-400 text-slate-950 font-black rounded-lg text-xs">Connect</button>
       </div>
     </div>
 
     <!-- 2. Repo & File Selector -->
-    <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 space-y-2.5">
-      <div class="text-[11px] font-bold uppercase text-amber-400">2. Select App Repo & File</div>
+    <div class="bg-[#1b1324]/95 border border-amber-500/20 rounded-2xl p-3.5 space-y-2.5">
+      <div class="text-[11px] font-bold uppercase text-rose-300">2. Select App Repo & File</div>
       <div class="grid grid-cols-2 gap-2">
-        <select id="repoSelect" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-white"></select>
-        <select id="fileSelect" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-white"></select>
+        <select id="repoSelect" class="bg-[#110b17] border border-amber-500/30 rounded-lg px-2.5 py-2 text-xs text-white"></select>
+        <select id="fileSelect" class="bg-[#110b17] border border-amber-500/30 rounded-lg px-2.5 py-2 text-xs text-white"></select>
       </div>
       <div class="flex gap-2">
-        <input id="newFileName" type="text" placeholder="Or type new filename (e.g. patch-test.js)" class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none">
-        <button id="createFileModeBtn" type="button" class="px-3 py-1.5 bg-slate-800 text-sky-300 font-bold rounded-lg text-xs">+ New</button>
+        <input id="newFileName" type="text" placeholder="Or type new filename (e.g. patch-test.js)" class="flex-1 bg-[#110b17] border border-amber-500/30 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none">
+        <button id="createFileModeBtn" type="button" class="px-3 py-1.5 bg-rose-500/20 border border-rose-400/40 text-rose-200 font-bold rounded-lg text-xs">+ New</button>
       </div>
     </div>
 
     <!-- 3. Code Editor & 1-Tap Clipboard Deploy -->
-    <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 space-y-2.5">
+    <div class="bg-[#1b1324]/95 border border-amber-500/20 rounded-2xl p-3.5 space-y-2.5">
       <div class="flex items-center justify-between">
-        <span id="activePathLabel" class="text-xs font-mono font-bold text-emerald-400 truncate">No file loaded</span>
+        <span id="activePathLabel" class="text-xs font-mono font-bold text-emerald-300 truncate">No file loaded</span>
         <div class="flex gap-1.5 shrink-0">
-          <button id="pasteReplaceBtn" type="button" class="px-2.5 py-1.5 bg-amber-500 text-slate-950 font-black rounded-lg text-[11px]">📋 Paste & Replace All</button>
+          <button id="pasteReplaceBtn" type="button" class="px-2.5 py-1.5 bg-amber-400 text-slate-950 font-black rounded-lg text-[11px]">📋 Paste & Replace All</button>
           <button id="copyCurrentBtn" type="button" class="px-2.5 py-1.5 bg-slate-800 text-slate-200 font-bold rounded-lg text-[11px]">Copy</button>
         </div>
       </div>
-      <textarea id="codeEditor" rows="15" spellcheck="false" placeholder="File code loads here..." class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-[11px] text-emerald-200 font-mono leading-relaxed outline-none"></textarea>
+      <textarea id="codeEditor" rows="13" spellcheck="false" placeholder="Type or paste code here — MJ will head to the computer to deploy it..." class="w-full bg-[#0d0812] border border-amber-500/25 rounded-xl p-3 text-[11px] text-amber-100 font-mono leading-relaxed outline-none"></textarea>
       <div class="flex gap-2">
-        <input id="commitMsg" type="text" value="Mobile App Forge update" class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white outline-none">
-        <button id="deployBtn" type="button" class="px-4 py-2.5 bg-emerald-500 text-slate-950 font-black rounded-xl text-xs shrink-0">🚀 Deploy Now</button>
+        <input id="commitMsg" type="text" value="Cozy Loft Studio deploy" class="flex-1 bg-[#110b17] border border-amber-500/30 rounded-lg px-3 py-2 text-xs text-white outline-none">
+        <button id="deployBtn" type="button" class="px-4 py-2.5 bg-gradient-to-r from-rose-500 to-amber-500 text-slate-950 font-black rounded-xl text-xs shrink-0 shadow-lg">🚀 Deploy Now</button>
       </div>
-      <a id="liveSiteLink" href="#" target="_blank" class="hidden block text-center py-2 bg-slate-950 border border-emerald-500/40 rounded-xl text-xs font-bold text-emerald-300">↗ Open Live App</a>
+      <a id="liveSiteLink" href="#" target="_blank" class="hidden block text-center py-2 bg-[#110b17] border border-emerald-500/40 rounded-xl text-xs font-bold text-emerald-300">↗ Open Live App</a>
     </div>
   </div>
 
   <script>
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
     const TOKEN_KEY = "app_forge_gh_token_v1";
-    let ghUser = "", currentSha = null, isNewFile = false;
-
+    let ghUser = "", currentSha = null, isNewFile = false, typingTimer = null;
     const $ = id => document.getElementById(id);
-    const getHeaders = () => ({
-      "Authorization": `Bearer ${localStorage.getItem(TOKEN_KEY) || ""}`,
-      "Accept": "application/vnd.github+json",
-      "Content-Type": "application/json"
-    });
+    const getHeaders = () => ({ "Authorization": `Bearer ${localStorage.getItem(TOKEN_KEY) || ""}`, "Accept": "application/vnd.github+json", "Content-Type": "application/json" });
+
+    function setMjState(mode, speechText) {
+      const mj = $("mjCharacter"), prog = $("screenProgress");
+      if (speechText) $("mjSpeech").firstElementChild.textContent = `💬 "${speechText}"`;
+      if (mode === "typing") {
+        mj.setAttribute("class", "mj-wrap mj-desk mj-typing");
+        prog.setAttribute("x2", "334");
+      } else if (mode === "desk") {
+        mj.setAttribute("class", "mj-wrap mj-desk");
+        prog.setAttribute("x2", "322");
+      } else {
+        mj.setAttribute("class", "mj-wrap mj-idle");
+        prog.setAttribute("x2", "306");
+      }
+    }
 
     function setBadge(text, tone = "idle") {
-      const b = $("buildBadge");
-      b.textContent = text;
+      const b = $("buildBadge"); b.textContent = text;
       b.className = tone === "ok"
-        ? "px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/20 border border-emerald-500 text-emerald-300"
+        ? "px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-500/25 border border-emerald-400 text-emerald-200"
         : tone === "busy"
-        ? "px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/20 border border-amber-500 text-amber-300"
-        : "px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-900 border border-slate-700 text-slate-400";
+        ? "px-3 py-1 rounded-full text-[11px] font-bold bg-amber-500/25 border border-amber-400 text-amber-200"
+        : "px-3 py-1 rounded-full text-[11px] font-bold bg-black/55 border border-amber-400/30 text-amber-200";
     }
 
     async function initConnection() {
-      const tok = localStorage.getItem(TOKEN_KEY);
-      if (!tok) return;
-      $("ghToken").value = tok;
-      $("tokenWrap").classList.add("hidden");
-      setBadge("Connecting...", "busy");
+      const tok = localStorage.getItem(TOKEN_KEY); if (!tok) return;
+      $("ghToken").value = tok; $("tokenWrap").classList.add("hidden"); setBadge("Connecting...", "busy");
       const uRes = await fetch("https://api.github.com/user", { headers: getHeaders() });
       if (!uRes.ok) { setBadge("Token Error"); $("tokenWrap").classList.remove("hidden"); return; }
-      const u = await uRes.json();
-      ghUser = u.login;
-
+      const u = await uRes.json(); ghUser = u.login;
       const rRes = await fetch("https://api.github.com/user/repos?per_page=100&sort=updated", { headers: getHeaders() });
       const repos = await rRes.json();
       $("repoSelect").innerHTML = repos.map(r => `<option value="${r.name}">${r.name}</option>`).join("");
+      $("repoCounterPill").textContent = `${repos.length} Repos`;
       if (repos.some(r => r.name === "Skill-Tree")) $("repoSelect").value = "Skill-Tree";
-      setBadge(`Connected: ${ghUser}`, "ok");
-      await loadRepoFiles();
+      setBadge(`Connected: ${ghUser}`, "ok"); await loadRepoFiles();
     }
 
     async function loadRepoFiles() {
-      const repo = $("repoSelect").value;
-      if (!repo || !ghUser) return;
-      const link = $("liveSiteLink");
-      link.href = `https://${ghUser.toLowerCase()}.github.io/${repo}/`;
-      link.textContent = `↗ Open Live ${repo}`;
-      link.classList.remove("hidden");
-
+      const repo = $("repoSelect").value; if (!repo || !ghUser) return;
+      const link = $("liveSiteLink"); link.href = `https://${ghUser.toLowerCase()}.github.io/${repo}/`; link.textContent = `↗ Open Live ${repo}`; link.classList.remove("hidden");
       const res = await fetch(`https://api.github.com/repos/${ghUser}/${repo}/contents/`, { headers: getHeaders() });
       const items = await res.json();
       const files = Array.isArray(items) ? items.filter(x => x.type === "file") : [];
@@ -116,42 +245,31 @@
     }
 
     async function loadFileContent(path) {
-      const repo = $("repoSelect").value;
-      isNewFile = false;
-      $("activePathLabel").textContent = `${repo}/${path}`;
-      setBadge("Loading file...", "busy");
+      const repo = $("repoSelect").value; isNewFile = false; $("activePathLabel").textContent = `${repo}/${path}`; setBadge("Loading file...", "busy");
       const res = await fetch(`https://api.github.com/repos/${ghUser}/${repo}/contents/${path}`, { headers: getHeaders() });
-      const data = await res.json();
-      currentSha = data.sha;
+      const data = await res.json(); currentSha = data.sha;
       const bytes = Uint8Array.from(atob(data.content.replace(/\n/g, "")), c => c.charCodeAt(0));
-      $("codeEditor").value = new TextDecoder().decode(bytes);
-      setBadge("Ready", "ok");
+      $("codeEditor").value = new TextDecoder().decode(bytes); setBadge("Ready", "ok");
     }
 
     async function deployFile() {
-      const repo = $("repoSelect").value;
-      const path = isNewFile ? $("newFileName").value.trim() : $("fileSelect").value;
+      const repo = $("repoSelect").value, path = isNewFile ? $("newFileName").value.trim() : $("fileSelect").value;
       if (!repo || !path) return alert("Select or name a file first.");
-      const content = $("codeEditor").value;
-      const encoded = btoa(String.fromCharCode(...new TextEncoder().encode(content)));
-
+      const encoded = btoa(String.fromCharCode(...new TextEncoder().encode($("codeEditor").value)));
       setBadge("Deploying...", "busy");
+      setMjState("typing", `Walking over to the desk and pushing ${path} to GitHub...`);
+
       const body = { message: $("commitMsg").value.trim() || `Update ${path}`, content: encoded };
       if (!isNewFile && currentSha) body.sha = currentSha;
-
-      const res = await fetch(`https://api.github.com/repos/${ghUser}/${repo}/contents/${path}`, {
-        method: "PUT", headers: getHeaders(), body: JSON.stringify(body)
-      });
+      const res = await fetch(`https://api.github.com/repos/${ghUser}/${repo}/contents/${path}`, { method: "PUT", headers: getHeaders(), body: JSON.stringify(body) });
       if (!res.ok) {
-        const err = await res.json();
-        setBadge("Deploy Failed");
+        const err = await res.json(); setBadge("Deploy Failed");
+        setMjState("idle", "Hit a snag on that commit — check the alert!");
         return alert("GitHub API Error: " + (err.message || res.status));
       }
-      const out = await res.json();
-      currentSha = out.content.sha;
-      isNewFile = false;
-      $("activePathLabel").textContent = `${repo}/${path}`;
+      const out = await res.json(); currentSha = out.content.sha; isNewFile = false; $("activePathLabel").textContent = `${repo}/${path}`;
       setBadge("Building Pages...", "busy");
+      setMjState("typing", "Commit landed! Compiling your live GitHub Pages build...");
       pollPagesStatus(repo);
     }
 
@@ -162,45 +280,43 @@
           const res = await fetch(`https://api.github.com/repos/${ghUser}/${repo}/pages/builds/latest`, { headers: getHeaders() });
           if (res.ok) {
             const b = await res.json();
-            if (b.status === "built") { setBadge("🟢 Live on Pages!", "ok"); return; }
-            if (b.status === "errored") { setBadge("🔴 Build Error"); return; }
+            if (b.status === "built") {
+              setBadge("🟢 Live on Pages!", "ok");
+              setMjState("desk", `Boom! ${repo} is live on GitHub Pages!`);
+              setTimeout(() => setMjState("idle", "Ready whenever you are, tiger — what are we building next?"), 4500);
+              return;
+            }
+            if (b.status === "errored") { setBadge("🔴 Build Error"); setMjState("idle", "GitHub Pages reported a build error."); return; }
           }
         } catch {}
       }
       setBadge("🟢 Pushed to Main", "ok");
+      setMjState("idle", "Code is pushed to main and live!");
     }
 
-    $("saveTokenBtn").onclick = () => {
-      const val = $("ghToken").value.trim();
-      if (!val) return;
-      localStorage.setItem(TOKEN_KEY, val);
-      initConnection();
-    };
+    // Whenever you type or paste into the editor, MJ walks over to the cozy computer and types!
+    $("codeEditor").addEventListener("input", () => {
+      setMjState("typing", "Got your edits — typing them into the loft terminal...");
+      clearTimeout(typingTimer);
+      typingTimer = setTimeout(() => setMjState("desk", "Sitting at the terminal — hit Deploy Now when ready!"), 1600);
+    });
+
+    $("saveTokenBtn").onclick = () => { const val = $("ghToken").value.trim(); if (!val) return; localStorage.setItem(TOKEN_KEY, val); initConnection(); };
     $("toggleTokenBtn").onclick = () => $("tokenWrap").classList.toggle("hidden");
     $("repoSelect").onchange = loadRepoFiles;
     $("fileSelect").onchange = () => loadFileContent($("fileSelect").value);
-    $("createFileModeBtn").onclick = () => {
-      const fn = $("newFileName").value.trim();
-      if (!fn) return alert("Type a filename first (e.g. patch-new.js)");
-      isNewFile = true; currentSha = null;
-      $("activePathLabel").textContent = `${$("repoSelect").value}/${fn} (NEW)`;
-      $("codeEditor").value = "";
-    };
+    $("createFileModeBtn").onclick = () => { const fn = $("newFileName").value.trim(); if (!fn) return alert("Type a filename first"); isNewFile = true; currentSha = null; $("activePathLabel").textContent = `${$("repoSelect").value}/${fn} (NEW)`; $("codeEditor").value = ""; setMjState("desk", `Prepping brand-new file ${fn} on the computer!`); };
     $("pasteReplaceBtn").onclick = async () => {
       try {
         const clip = await navigator.clipboard.readText();
-        if (!clip) return alert("Clipboard is empty.");
-        $("codeEditor").value = clip;
-      } catch {
-        alert("Tap inside the code box and paste manually if clipboard permission was blocked.");
-      }
+        if (clip) {
+          $("codeEditor").value = clip;
+          setMjState("typing", "Pasted your clipboard! Ready to deploy whenever you say go.");
+        }
+      } catch { alert("Paste manually if clipboard permission was blocked."); }
     };
-    $("copyCurrentBtn").onclick = async () => {
-      await navigator.clipboard.writeText($("codeEditor").value);
-      setBadge("Copied!", "ok");
-    };
+    $("copyCurrentBtn").onclick = async () => { await navigator.clipboard.writeText($("codeEditor").value); setBadge("Copied!", "ok"); };
     $("deployBtn").onclick = deployFile;
-
     initConnection();
   </script>
 </body>
