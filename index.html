@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#020617">
+  <title>App Forge • Mobile GitHub Deployer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen p-4 font-sans">
+  <div class="max-w-lg mx-auto space-y-3 pb-12">
+    <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+      <div>
+        <div class="text-[10px] font-black uppercase tracking-widest text-emerald-400">Mobile Dev Studio</div>
+        <h1 class="text-xl font-black text-white">⚡ APP FORGE DEPLOYER</h1>
+      </div>
+      <div id="buildBadge" class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-900 border border-slate-700 text-slate-400">Idle</div>
+    </div>
+
+    <!-- 1. GitHub Token Connection -->
+    <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 space-y-2">
+      <div class="flex justify-between items-center">
+        <span class="text-[11px] font-bold uppercase text-sky-400">1. GitHub API Token (Stored Locally)</span>
+        <button id="toggleTokenBtn" type="button" class="text-[11px] text-slate-400 underline">Show / Edit</button>
+      </div>
+      <div id="tokenWrap" class="flex gap-2">
+        <input id="ghToken" type="password" placeholder="Paste github_pat_... token" class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white outline-none">
+        <button id="saveTokenBtn" type="button" class="px-3.5 py-2 bg-sky-500 text-slate-950 font-black rounded-lg text-xs">Connect</button>
+      </div>
+    </div>
+
+    <!-- 2. Repo & File Selector -->
+    <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 space-y-2.5">
+      <div class="text-[11px] font-bold uppercase text-amber-400">2. Select App Repo & File</div>
+      <div class="grid grid-cols-2 gap-2">
+        <select id="repoSelect" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-white"></select>
+        <select id="fileSelect" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-white"></select>
+      </div>
+      <div class="flex gap-2">
+        <input id="newFileName" type="text" placeholder="Or type new filename (e.g. patch-test.js)" class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none">
+        <button id="createFileModeBtn" type="button" class="px-3 py-1.5 bg-slate-800 text-sky-300 font-bold rounded-lg text-xs">+ New</button>
+      </div>
+    </div>
+
+    <!-- 3. Code Editor & 1-Tap Clipboard Deploy -->
+    <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 space-y-2.5">
+      <div class="flex items-center justify-between">
+        <span id="activePathLabel" class="text-xs font-mono font-bold text-emerald-400 truncate">No file loaded</span>
+        <div class="flex gap-1.5 shrink-0">
+          <button id="pasteReplaceBtn" type="button" class="px-2.5 py-1.5 bg-amber-500 text-slate-950 font-black rounded-lg text-[11px]">📋 Paste & Replace All</button>
+          <button id="copyCurrentBtn" type="button" class="px-2.5 py-1.5 bg-slate-800 text-slate-200 font-bold rounded-lg text-[11px]">Copy</button>
+        </div>
+      </div>
+      <textarea id="codeEditor" rows="15" spellcheck="false" placeholder="File code loads here..." class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-[11px] text-emerald-200 font-mono leading-relaxed outline-none"></textarea>
+      <div class="flex gap-2">
+        <input id="commitMsg" type="text" value="Mobile App Forge update" class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white outline-none">
+        <button id="deployBtn" type="button" class="px-4 py-2.5 bg-emerald-500 text-slate-950 font-black rounded-xl text-xs shrink-0">🚀 Deploy Now</button>
+      </div>
+      <a id="liveSiteLink" href="#" target="_blank" class="hidden block text-center py-2 bg-slate-950 border border-emerald-500/40 rounded-xl text-xs font-bold text-emerald-300">↗ Open Live App</a>
+    </div>
+  </div>
+
+  <script>
+    const TOKEN_KEY = "app_forge_gh_token_v1";
+    let ghUser = "", currentSha = null, isNewFile = false;
+
+    const $ = id => document.getElementById(id);
+    const getHeaders = () => ({
+      "Authorization": `Bearer ${localStorage.getItem(TOKEN_KEY) || ""}`,
+      "Accept": "application/vnd.github+json",
+      "Content-Type": "application/json"
+    });
+
+    function setBadge(text, tone = "idle") {
+      const b = $("buildBadge");
+      b.textContent = text;
+      b.className = tone === "ok"
+        ? "px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/20 border border-emerald-500 text-emerald-300"
+        : tone === "busy"
+        ? "px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/20 border border-amber-500 text-amber-300"
+        : "px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-900 border border-slate-700 text-slate-400";
+    }
+
+    async function initConnection() {
+      const tok = localStorage.getItem(TOKEN_KEY);
+      if (!tok) return;
+      $("ghToken").value = tok;
+      $("tokenWrap").classList.add("hidden");
+      setBadge("Connecting...", "busy");
+      const uRes = await fetch("https://api.github.com/user", { headers: getHeaders() });
+      if (!uRes.ok) { setBadge("Token Error"); $("tokenWrap").classList.remove("hidden"); return; }
+      const u = await uRes.json();
+      ghUser = u.login;
+
+      const rRes = await fetch("https://api.github.com/user/repos?per_page=100&sort=updated", { headers: getHeaders() });
+      const repos = await rRes.json();
+      $("repoSelect").innerHTML = repos.map(r => `<option value="${r.name}">${r.name}</option>`).join("");
+      if (repos.some(r => r.name === "Skill-Tree")) $("repoSelect").value = "Skill-Tree";
+      setBadge(`Connected: ${ghUser}`, "ok");
+      await loadRepoFiles();
+    }
+
+    async function loadRepoFiles() {
+      const repo = $("repoSelect").value;
+      if (!repo || !ghUser) return;
+      const link = $("liveSiteLink");
+      link.href = `https://${ghUser.toLowerCase()}.github.io/${repo}/`;
+      link.textContent = `↗ Open Live ${repo}`;
+      link.classList.remove("hidden");
+
+      const res = await fetch(`https://api.github.com/repos/${ghUser}/${repo}/contents/`, { headers: getHeaders() });
+      const items = await res.json();
+      const files = Array.isArray(items) ? items.filter(x => x.type === "file") : [];
+      $("fileSelect").innerHTML = files.map(f => `<option value="${f.path}">${f.path}</option>`).join("");
+      if (files.length) await loadFileContent(files[0].path);
+    }
+
+    async function loadFileContent(path) {
+      const repo = $("repoSelect").value;
+      isNewFile = false;
+      $("activePathLabel").textContent = `${repo}/${path}`;
+      setBadge("Loading file...", "busy");
+      const res = await fetch(`https://api.github.com/repos/${ghUser}/${repo}/contents/${path}`, { headers: getHeaders() });
+      const data = await res.json();
+      currentSha = data.sha;
+      const bytes = Uint8Array.from(atob(data.content.replace(/\n/g, "")), c => c.charCodeAt(0));
+      $("codeEditor").value = new TextDecoder().decode(bytes);
+      setBadge("Ready", "ok");
+    }
+
+    async function deployFile() {
+      const repo = $("repoSelect").value;
+      const path = isNewFile ? $("newFileName").value.trim() : $("fileSelect").value;
+      if (!repo || !path) return alert("Select or name a file first.");
+      const content = $("codeEditor").value;
+      const encoded = btoa(String.fromCharCode(...new TextEncoder().encode(content)));
+
+      setBadge("Deploying...", "busy");
+      const body = { message: $("commitMsg").value.trim() || `Update ${path}`, content: encoded };
+      if (!isNewFile && currentSha) body.sha = currentSha;
+
+      const res = await fetch(`https://api.github.com/repos/${ghUser}/${repo}/contents/${path}`, {
+        method: "PUT", headers: getHeaders(), body: JSON.stringify(body)
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        setBadge("Deploy Failed");
+        return alert("GitHub API Error: " + (err.message || res.status));
+      }
+      const out = await res.json();
+      currentSha = out.content.sha;
+      isNewFile = false;
+      $("activePathLabel").textContent = `${repo}/${path}`;
+      setBadge("Building Pages...", "busy");
+      pollPagesStatus(repo);
+    }
+
+    async function pollPagesStatus(repo) {
+      for (let i = 0; i < 18; i++) {
+        await new Promise(r => setTimeout(r, 4000));
+        try {
+          const res = await fetch(`https://api.github.com/repos/${ghUser}/${repo}/pages/builds/latest`, { headers: getHeaders() });
+          if (res.ok) {
+            const b = await res.json();
+            if (b.status === "built") { setBadge("🟢 Live on Pages!", "ok"); return; }
+            if (b.status === "errored") { setBadge("🔴 Build Error"); return; }
+          }
+        } catch {}
+      }
+      setBadge("🟢 Pushed to Main", "ok");
+    }
+
+    $("saveTokenBtn").onclick = () => {
+      const val = $("ghToken").value.trim();
+      if (!val) return;
+      localStorage.setItem(TOKEN_KEY, val);
+      initConnection();
+    };
+    $("toggleTokenBtn").onclick = () => $("tokenWrap").classList.toggle("hidden");
+    $("repoSelect").onchange = loadRepoFiles;
+    $("fileSelect").onchange = () => loadFileContent($("fileSelect").value);
+    $("createFileModeBtn").onclick = () => {
+      const fn = $("newFileName").value.trim();
+      if (!fn) return alert("Type a filename first (e.g. patch-new.js)");
+      isNewFile = true; currentSha = null;
+      $("activePathLabel").textContent = `${$("repoSelect").value}/${fn} (NEW)`;
+      $("codeEditor").value = "";
+    };
+    $("pasteReplaceBtn").onclick = async () => {
+      try {
+        const clip = await navigator.clipboard.readText();
+        if (!clip) return alert("Clipboard is empty.");
+        $("codeEditor").value = clip;
+      } catch {
+        alert("Tap inside the code box and paste manually if clipboard permission was blocked.");
+      }
+    };
+    $("copyCurrentBtn").onclick = async () => {
+      await navigator.clipboard.writeText($("codeEditor").value);
+      setBadge("Copied!", "ok");
+    };
+    $("deployBtn").onclick = deployFile;
+
+    initConnection();
+  </script>
+</body>
+</html>
