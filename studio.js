@@ -51,7 +51,7 @@ loader.load("mj.vrm", gltf => {
   VRMUtils.removeUnnecessaryJoints(gltf.scene);
   currentVrm = vrm;
   vrm.scene.position.set(0.10, -0.38, 0.18);
-  vrm.scene.rotation.y = Math.PI; // Correct default front-facing orientation
+  vrm.scene.rotation.y = 0; // Faces camera directly
   vrm.scene.matrixAutoUpdate = false;
   vrm.scene.updateMatrix();
   scene.add(vrm.scene);
@@ -81,7 +81,6 @@ function animate() {
     const lSh = h.getNormalizedBoneNode("leftShoulder"), rSh = h.getNormalizedBoneNode("rightShoulder");
     const lArm = h.getNormalizedBoneNode("leftUpperArm"), rArm = h.getNormalizedBoneNode("rightUpperArm");
     const lFore = h.getNormalizedBoneNode("leftLowerArm"), rFore = h.getNormalizedBoneNode("rightLowerArm");
-    const lHand = h.getNormalizedBoneNode("leftHand"), rHand = h.getNormalizedBoneNode("rightHand");
     const lUpLeg = h.getNormalizedBoneNode("leftUpperLeg"), rUpLeg = h.getNormalizedBoneNode("rightUpperLeg");
     const lLoLeg = h.getNormalizedBoneNode("leftLowerLeg"), rLoLeg = h.getNormalizedBoneNode("rightLowerLeg");
 
@@ -101,7 +100,7 @@ function animate() {
     smoothBone(lSh, 0, 0, 0.04 + breath * 0.015, 0.1);
     smoothBone(rSh, 0, 0, -0.04 - breath * 0.015, 0.1);
 
-    const targetRotY = baseFacing + (mjMode === "hack" ? -0.75 : mjMode === "sway" ? Math.sin(t * 3.2) * 0.22 : 0.18);
+    const targetRotY = baseFacing + (mjMode === "hack" ? -0.75 : mjMode === "sway" ? Math.sin(t * 3.2) * 0.22 : 0);
     currentVrm.scene.rotation.y = lerp(currentVrm.scene.rotation.y, targetRotY, 0.1);
 
     if (mjMode === "hack") {
@@ -186,7 +185,8 @@ function setBadge(text, tone = "idle") {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  $("settingsBtn").onclick = () => $("settingsPopover").classList.toggle("hidden");
+  $("settingsBtn").onclick = (e) => { e.stopPropagation(); $("settingsPopover").classList.toggle("hidden"); };
+  document.onclick = (e) => { if (!e.target.closest("#settingsPopover") && !e.target.closest("#settingsBtn")) $("settingsPopover").classList.add("hidden"); };
   $("flipFacingBtn").onclick = () => { baseFacing = baseFacing === 0 ? Math.PI : 0; $("settingsPopover").classList.add("hidden"); };
   $("nsfwToggleBtn").onclick = () => {
     nsfwEnabled = !nsfwEnabled;
