@@ -21,19 +21,45 @@
 <body class="bg-[#0d0714] text-amber-50 min-h-screen p-3.5 font-sans">
   <div class="max-w-lg mx-auto space-y-3 pb-12">
     <div class="relative rounded-3xl overflow-hidden border border-rose-500/35 shadow-2xl bg-[#140b20]">
+      <!-- Top HUD -->
       <div class="absolute top-3 left-3 right-3 z-10 flex items-center justify-between">
         <div class="bg-black/75 px-3 py-1 rounded-full border border-rose-400/50 text-[10px] font-black uppercase text-rose-200">🌸 Modular Studio</div>
-        <div id="buildBadge" class="px-3 py-1 rounded-full text-[11px] font-bold bg-black/65 border border-amber-400/35 text-amber-200">Idle</div>
+        <div class="flex items-center gap-1.5">
+          <div id="buildBadge" class="px-3 py-1 rounded-full text-[11px] font-bold bg-black/65 border border-amber-400/35 text-amber-200">Idle</div>
+          <button id="settingsBtn" type="button" class="w-7 h-7 rounded-full bg-black/75 border border-rose-400/40 text-xs flex items-center justify-center text-rose-200">⚙️</button>
+        </div>
       </div>
+
+      <!-- Compact Settings Popover -->
+      <div id="settingsPopover" class="hidden absolute top-12 right-3 z-20 w-48 rounded-2xl bg-[#160c24]/95 border border-rose-500/40 p-3 shadow-2xl space-y-2.5 backdrop-blur-xl">
+        <div class="text-[10px] font-black uppercase tracking-wider text-rose-300">Studio Settings</div>
+        <button id="flipFacingBtn" type="button" class="w-full py-1.5 px-2.5 rounded-lg bg-black/60 border border-amber-500/30 text-[11px] font-bold text-amber-200 text-left">🔄 Flip 180° Facing</button>
+        <div class="flex items-center justify-between pt-1 border-t border-rose-500/20">
+          <span class="text-[11px] font-bold text-pink-200">🔞 NSFW Mode</span>
+          <button id="nsfwToggleBtn" type="button" class="px-2.5 py-1 rounded-full text-[10px] font-black bg-slate-800 border border-rose-500/40 text-rose-300">OFF</button>
+        </div>
+      </div>
+
       <div id="stage3d" class="w-full h-64 relative block"></div>
+
+      <!-- Primary Command Bar -->
       <div class="grid grid-cols-4 gap-1.5 px-3 py-2 bg-black/80 border-t border-rose-500/20">
         <button id="cmdIdleBtn" type="button" class="py-1.5 rounded-lg bg-slate-800/90 border border-rose-500/30 text-[11px] font-bold text-rose-200">😌 Idle</button>
         <button id="cmdHackBtn" type="button" class="py-1.5 rounded-lg bg-slate-800/90 border border-sky-500/30 text-[11px] font-bold text-sky-200">💻 Hack</button>
         <button id="cmdWaveBtn" type="button" class="py-1.5 rounded-lg bg-slate-800/90 border border-amber-500/30 text-[11px] font-bold text-amber-200">👋 Wave</button>
         <button id="cmdCelebrateBtn" type="button" class="py-1.5 rounded-lg bg-slate-800/90 border border-emerald-500/30 text-[11px] font-bold text-emerald-200">🎉 Celebrate</button>
       </div>
+
+      <!-- Extra 4 NSFW / Flirty Command Bar (Revealed when NSFW Mode is toggled ON) -->
+      <div id="nsfwBar" class="hidden grid grid-cols-4 gap-1.5 px-3 pb-2 bg-black/80">
+        <button id="cmdSwayBtn" type="button" class="py-1.5 rounded-lg bg-rose-950/90 border border-rose-500/50 text-[11px] font-bold text-rose-200">💃 Sway</button>
+        <button id="cmdKissBtn" type="button" class="py-1.5 rounded-lg bg-pink-950/90 border border-pink-500/50 text-[11px] font-bold text-pink-200">😘 Kiss</button>
+        <button id="cmdKneelBtn" type="button" class="py-1.5 rounded-lg bg-fuchsia-950/90 border border-fuchsia-500/50 text-[11px] font-bold text-fuchsia-200">🧎 Pose</button>
+        <button id="cmdTeaseBtn" type="button" class="py-1.5 rounded-lg bg-red-950/90 border border-red-500/50 text-[11px] font-bold text-red-200">🔥 Tease</button>
+      </div>
+
       <div id="mjSpeech" class="px-4 py-2 bg-black/90 border-t border-rose-500/25 text-[11px] text-amber-200 flex items-center justify-between">
-        <span>💬 "Modular engine online!"</span>
+        <span>💬 "Facing forward and loosened up!"</span>
         <span id="repoCounterPill" class="text-[10px] font-bold text-emerald-400"></span>
       </div>
     </div>
