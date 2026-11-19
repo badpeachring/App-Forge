@@ -9,27 +9,29 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     .glass-card { background: rgba(18, 11, 28, 0.88); backdrop-filter: blur(16px); border: 1px solid rgba(244, 63, 94, 0.25); }
-    @keyframes mjBreath {
-      0%, 100% { transform: scale(1.01) translate3d(0, 0, 0); }
-      50% { transform: scale(1.032) translate3d(0, -3px, 0); }
+    @keyframes mjIdleRich {
+      0% { transform: scale(1.015) translate3d(0px, 0px, 0); filter: brightness(1.0) contrast(1.02); }
+      33% { transform: scale(1.038) translate3d(-4px, -4px, 0); filter: brightness(1.05) contrast(1.04); }
+      66% { transform: scale(1.026) translate3d(4px, -2px, 0); filter: brightness(1.02) contrast(1.03); }
+      100% { transform: scale(1.015) translate3d(0px, 0px, 0); filter: brightness(1.0) contrast(1.02); }
     }
     @keyframes mjHackPulse {
       0%, 100% { transform: scale(1.02) translate3d(0, 0, 0); filter: brightness(1.02); }
-      50% { transform: scale(1.038) translate3d(-2px, -1px, 0); filter: brightness(1.12); }
+      50% { transform: scale(1.04) translate3d(-2px, -1px, 0); filter: brightness(1.13); }
     }
     @keyframes mjCelebratePop {
-      0%, 100% { transform: scale(1.02) translate3d(0, 0, 0); }
-      50% { transform: scale(1.045) translate3d(0, -5px, 0); }
+      0%, 100% { transform: scale(1.02) translate3d(0, 0, 0); filter: brightness(1.05); }
+      50% { transform: scale(1.05) translate3d(0, -6px, 0); filter: brightness(1.14); }
     }
     @keyframes mjSwayFloat {
-      0%, 100% { transform: scale(1.03) translate3d(-4px, 0, 0); }
-      50% { transform: scale(1.03) translate3d(4px, -2px, 0); }
+      0%, 100% { transform: scale(1.03) translate3d(-5px, 0, 0); }
+      50% { transform: scale(1.035) translate3d(5px, -3px, 0); }
     }
-    .fx-idle { animation: mjBreath 5.5s ease-in-out infinite; }
-    .fx-hack { animation: mjHackPulse 0.95s ease-in-out infinite; }
-    .fx-celebrate { animation: mjCelebratePop 1.4s ease-in-out infinite; }
-    .fx-sway { animation: mjSwayFloat 3.6s ease-in-out infinite; }
-    .fx-paused { animation: none !important; transform: scale(1) !important; }
+    .fx-idle { animation: mjIdleRich 11s ease-in-out infinite; will-change: transform, filter; }
+    .fx-hack { animation: mjHackPulse 0.95s ease-in-out infinite; will-change: transform, filter; }
+    .fx-celebrate { animation: mjCelebratePop 1.35s ease-in-out infinite; will-change: transform, filter; }
+    .fx-sway { animation: mjSwayFloat 3.6s ease-in-out infinite; will-change: transform; }
+    .fx-paused { animation: none !important; transform: scale(1) !important; filter: none !important; }
   </style>
 </head>
 <body class="bg-[#0d0714] text-amber-50 min-h-screen p-3.5 font-sans">
@@ -53,8 +55,8 @@
           <button id="motionToggleBtn" type="button" class="px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-500 text-slate-950">ON</button>
         </div>
         <div class="flex items-center justify-between pt-1.5 border-t border-rose-500/20">
-          <span class="text-[11px] font-bold text-pink-200">🔞 NSFW Mode</span>
-          <button id="nsfwToggleBtn" type="button" class="px-2.5 py-1 rounded-full text-[10px] font-black bg-slate-800 border border-rose-500/40 text-rose-300">OFF</button>
+          <span class="text-[11px] font-bold text-pink-200">🎭 Poses</span>
+          <button id="posesToggleBtn" type="button" class="px-2.5 py-1 rounded-full text-[10px] font-black bg-slate-800 border border-rose-500/40 text-rose-300">OFF</button>
         </div>
       </div>
 
@@ -62,23 +64,23 @@
       <div id="stage2d" class="w-full aspect-video relative overflow-hidden bg-[#140b20]">
         <div id="layerA" class="absolute inset-0 transition-opacity duration-300 opacity-100"></div>
         <div id="layerB" class="absolute inset-0 transition-opacity duration-300 opacity-0"></div>
-        <div id="fxGlow" class="absolute inset-0 pointer-events-none transition-all duration-300"></div>
+        <div id="fxGlow" class="absolute inset-0 pointer-events-none transition-all duration-500"></div>
       </div>
 
-      <!-- Primary Command Bar -->
-      <div class="grid grid-cols-4 gap-1.5 px-3 py-2 bg-black/85 border-t border-rose-500/20">
-        <button id="cmdIdleBtn" type="button" class="py-1.5 rounded-lg bg-slate-800/90 border border-rose-500/30 text-[11px] font-bold text-rose-200">😌 Idle</button>
-        <button id="cmdHackBtn" type="button" class="py-1.5 rounded-lg bg-slate-800/90 border border-sky-500/30 text-[11px] font-bold text-sky-200">💻 Hack</button>
-        <button id="cmdWaveBtn" type="button" class="py-1.5 rounded-lg bg-slate-800/90 border border-amber-500/30 text-[11px] font-bold text-amber-200">👋 Wave</button>
-        <button id="cmdCelebrateBtn" type="button" class="py-1.5 rounded-lg bg-slate-800/90 border border-emerald-500/30 text-[11px] font-bold text-emerald-200">🎉 Celebrate</button>
-      </div>
-
-      <!-- Extra 4 Unlocked Modes -->
-      <div id="nsfwBar" class="hidden grid grid-cols-4 gap-1.5 px-3 pb-2 bg-black/85">
-        <button id="cmdSwayBtn" type="button" class="py-1.5 rounded-lg bg-rose-950/90 border border-rose-500/50 text-[11px] font-bold text-rose-200">💃 Sway</button>
-        <button id="cmdKissBtn" type="button" class="py-1.5 rounded-lg bg-pink-950/90 border border-pink-500/50 text-[11px] font-bold text-pink-200">😘 Kiss</button>
-        <button id="cmdKneelBtn" type="button" class="py-1.5 rounded-lg bg-fuchsia-950/90 border border-fuchsia-500/50 text-[11px] font-bold text-fuchsia-200">🧎 Pose</button>
-        <button id="cmdTeaseBtn" type="button" class="py-1.5 rounded-lg bg-red-950/90 border border-red-500/50 text-[11px] font-bold text-red-200">🔥 Tease</button>
+      <!-- Hidden Until Poses Toggle Is Turned ON -->
+      <div id="posesPanel" class="hidden space-y-1.5 px-3 py-2 bg-black/85 border-t border-rose-500/20">
+        <div class="grid grid-cols-4 gap-1.5">
+          <button id="cmdIdleBtn" type="button" class="py-1.5 rounded-lg bg-slate-800/90 border border-rose-500/30 text-[11px] font-bold text-rose-200">😌 Idle</button>
+          <button id="cmdHackBtn" type="button" class="py-1.5 rounded-lg bg-slate-800/90 border border-sky-500/30 text-[11px] font-bold text-sky-200">💻 Hack</button>
+          <button id="cmdWaveBtn" type="button" class="py-1.5 rounded-lg bg-slate-800/90 border border-amber-500/30 text-[11px] font-bold text-amber-200">👋 Wave</button>
+          <button id="cmdCelebrateBtn" type="button" class="py-1.5 rounded-lg bg-slate-800/90 border border-emerald-500/30 text-[11px] font-bold text-emerald-200">🎉 Celebrate</button>
+        </div>
+        <div class="grid grid-cols-4 gap-1.5">
+          <button id="cmdSwayBtn" type="button" class="py-1.5 rounded-lg bg-rose-950/90 border border-rose-500/50 text-[11px] font-bold text-rose-200">💃 Sway</button>
+          <button id="cmdKissBtn" type="button" class="py-1.5 rounded-lg bg-pink-950/90 border border-pink-500/50 text-[11px] font-bold text-pink-200">😘 Kiss</button>
+          <button id="cmdKneelBtn" type="button" class="py-1.5 rounded-lg bg-fuchsia-950/90 border border-fuchsia-500/50 text-[11px] font-bold text-fuchsia-200">🧎 Pose</button>
+          <button id="cmdTeaseBtn" type="button" class="py-1.5 rounded-lg bg-red-950/90 border border-red-500/50 text-[11px] font-bold text-red-200">🔥 Tease</button>
+        </div>
       </div>
 
       <div id="mjSpeech" class="px-4 py-2 bg-black/95 border-t border-rose-500/25 text-[11px] text-amber-200 flex items-center justify-between gap-2">
