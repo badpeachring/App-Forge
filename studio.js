@@ -4,8 +4,8 @@ const TOKEN_KEY = "app_forge_gh_token_v1";
 const NSFW_KEY = "app_forge_nsfw_v1";
 const MOTION_KEY = "app_forge_motion_v1";
 
-let ghUser = "", currentSha = null, isNewFile = false, typingTimer = null;
-let activeLayer = "A", currentMode = "idle";
+let ghUser = "", currentSha = null, isNewFile = false, typingTimer = null, introTimer = null, resetTimer = null;
+let activeLayer = "A", currentMode = "idle", deploySeq = 0;
 let nsfwEnabled = localStorage.getItem(NSFW_KEY) === "1";
 let motionEnabled = localStorage.getItem(MOTION_KEY) !== "0";
 
@@ -93,7 +93,7 @@ async function renderScene(mode) {
   if (!asset) {
     nextEl.innerHTML = `<div class="w-full h-full flex flex-col items-center justify-center text-center px-6">
       <div class="text-xs font-black uppercase tracking-widest text-rose-300">Waiting for Art Pack</div>
-      <div class="text-[11px] text-amber-100/80 mt-1">Upload <b>idle.jpg</b>, <b>hack.jpg</b>, <b>wave.jpg</b>, <b>celebrate.jpg</b> to App-Forge root.</div>
+      <div class="text-[11px] text-amber-100/80 mt-1">Upload <b>idle</b>, <b>hack</b>, <b>wave</b>, <b>celebrate</b> assets to App-Forge root.</div>
     </div>`;
   } else {
     nextEl.innerHTML = "";
@@ -108,13 +108,38 @@ async function renderScene(mode) {
   return usedFallback;
 }
 
-async function setMjState(mode, text) {
+async function setMjState(mode, text, { cancelIntro = true } = {}) {
+  if (cancelIntro && introTimer) {
+    clearTimeout(introTimer);
+    introTimer = null;
+  }
+  if (resetTimer) {
+    clearTimeout(resetTimer);
+    resetTimer = null;
+  }
   currentMode = mode;
   if (text) $("mjSpeech").firstElementChild.textContent = `💬 "${text}"`;
   const usedFallback = await renderScene(mode);
   if (usedFallback && text) {
-    $("mjSpeech").firstElementChild.textContent = `💬 "${text} (upload ${mode}.jpg for custom art)"`;
+    $("mjSpeech").firstElementChild.textContent = `💬 "${text} (add ${mode} asset for custom art)"`;
   }
+}
+
+function scheduleIdleReturn(delayMs, text = "Ready for the next move!") {
+  if (resetTimer) clearTimeout(resetTimer);
+  resetTimer = setTimeout(() => {
+    setMjState("idle", text);
+  }, delayMs);
+}
+
+function runGreetingSequence() {
+  setMjState("wave", "Hey there! Welcome back to the loft.", { cancelIntro: false });
+  introTimer = setTimeout(() => {
+    introTimer = null;
+    if (currentMode === "wave") {
+      setMjState("idle", "Loft studio online — ready when you are.");
+    }
+  }, 2800);
 }
 
 function setBadge(text, tone = "idle") {
@@ -195,67 +220,83 @@ async function loadFileContent(path) {
   setBadge("Ready", "ok");
 }
 
+function triggerUpdateActive(repo, path, badgeLabel, speechText) {
+  setBadge(badgeLabel, "ok");
+  setMjState("celebrate", speechText);
+  scheduleIdleReturn(5000, `${repo}/${path} is live and ready.`);
+}
+
 async function deployFile() {
   const repo = $("repoSelect").value;
   const path = isNewFile ? $("newFileName").value.trim() : $("fileSelect").value;
   if (!repo || !path) return alert("Select or name a file first.");
+  const seq = ++deploySeq;
+  const commitStartMs = Date.now();
   const encoded = toBase64($("codeEditor").value);
+
   setBadge("Deploying...", "busy");
-  setMjState("hack", `Deploying ${path}...`);
+  await setMjState("hack", `Hacking & pushing ${path} to ${repo}...`);
+
   const body = { message: $("commitMsg").value.trim() || `Update ${path}`, content: encoded };
   if (!isNewFile && currentSha) body.sha = currentSha;
+
   const res = await fetch(`https://api.github.com/repos/${ghUser}/${repo}/contents/${path}`, {
     method: "PUT",
     headers: getHeaders(),
     body: JSON.stringify(body)
   });
+
+  if (seq !== deploySeq) return;
   if (!res.ok) {
     const err = await res.json();
     setBadge("Deploy Failed");
-    setMjState("idle", "Deploy failed — check alert.");
+    await setMjState("idle", "Deploy failed — check alert.");
     return alert("API Error: " + (err.message || res.status));
   }
+
   const out = await res.json();
   currentSha = out.content.sha;
   isNewFile = false;
   $("activePathLabel").textContent = `${repo}/${path}`;
-  setBadge("Building Pages...", "busy");
-  setMjState("hack", "Commit landed! Compiling live Pages build...");
-  pollPagesStatus(repo);
+  setBadge("Building Live...", "busy");
+  await setMjState("hack", `Update committed — waiting for ${path} to go active...`);
+  pollPagesStatus(repo, path, seq, commitStartMs);
 }
 
-async function pollPagesStatus(repo) {
-  for (let i = 0; i < 18; i++) {
-    await new Promise(r => setTimeout(r, 4000));
+async function pollPagesStatus(repo, path, seq, commitStartMs) {
+  for (let i = 0; i < 24; i++) {
+    await new Promise(r => setTimeout(r, 3500));
+    if (seq !== deploySeq) return;
     try {
       const res = await fetch(`https://api.github.com/repos/${ghUser}/${repo}/pages/builds/latest`, { headers: getHeaders() });
       if (res.ok) {
         const b = await res.json();
-        if (b.status === "built") {
-          setBadge("🟢 Live on Pages!", "ok");
-          setMjState("celebrate", `Boom! ${repo} is live on Pages!`);
-          setTimeout(() => setMjState("idle", "Ready for the next deploy!"), 5000);
+        const updatedAtMs = b.updated_at ? Date.parse(b.updated_at) : 0;
+        if (b.status === "built" && (!updatedAtMs || updatedAtMs >= commitStartMs - 5000)) {
+          triggerUpdateActive(repo, path, "🟢 Update Active!", `${path} is live and active on ${repo}!`);
           return;
         }
         if (b.status === "errored") {
           setBadge("🔴 Build Error");
-          setMjState("idle", "Pages build errored.");
+          await setMjState("idle", `Build errored on ${repo}.`);
           return;
         }
+      } else if (res.status === 404) {
+        // Repo does not have GitHub Pages enabled; commit itself is active on branch
+        triggerUpdateActive(repo, path, "🟢 Update Active!", `${path} is active on ${repo}!`);
+        return;
       }
     } catch {}
   }
-  setBadge("🟢 Pushed to Main", "ok");
-  setMjState("celebrate", "Pushed to main!");
-  setTimeout(() => setMjState("idle", "Ready for the next deploy!"), 4500);
+  if (seq === deploySeq) {
+    triggerUpdateActive(repo, path, "🟢 Update Active!", `${path} update is active!`);
+  }
 }
 
 function boot() {
   syncSettingsUI();
-  setMjState("idle", "Loft studio loaded — ready when you are, tiger!");
-
-  // Preload core states in background for instant zero-lag switching
-  ["hack", "wave", "celebrate"].forEach(s => resolveAsset(s));
+  ["idle", "hack", "wave", "celebrate"].forEach(s => resolveAsset(s));
+  runGreetingSequence();
 
   $("settingsBtn").onclick = e => {
     e.stopPropagation();
@@ -280,9 +321,9 @@ function boot() {
   };
 
   $("cmdIdleBtn").onclick = () => setMjState("idle", "Chilling in the loft — ready when you are.");
-  $("cmdHackBtn").onclick = () => setMjState("hack", "Terminal engaged! Pushing code...");
+  $("cmdHackBtn").onclick = () => setMjState("hack", "Terminal engaged! Hacking build...");
   $("cmdWaveBtn").onclick = () => setMjState("wave", "Hey tiger! Systems are green.");
-  $("cmdCelebrateBtn").onclick = () => setMjState("celebrate", "Woohoo! Build is live on Pages!");
+  $("cmdCelebrateBtn").onclick = () => setMjState("celebrate", "Woohoo! Build is live!");
   $("cmdSwayBtn").onclick = () => setMjState("sway", "Feeling the vibe in the loft...");
   $("cmdKissBtn").onclick = () => setMjState("kiss", "Muah! Good luck on this deploy.");
   $("cmdKneelBtn").onclick = () => setMjState("pose", "Striking a pose for you...");
@@ -290,8 +331,7 @@ function boot() {
 
   $("codeEditor").addEventListener("input", () => {
     if (currentMode !== "hack") setMjState("hack", "Typing edits into terminal...");
-    clearTimeout(typingTimer);
-    typingTimer = setTimeout(() => setMjState("idle", "Ready — hit Deploy Now!"), 2000);
+    scheduleIdleReturn(2000, "Ready — hit Deploy Now!");
   });
 
   $("saveTokenBtn").onclick = () => {
