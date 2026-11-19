@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#0d0714">
-  <link rel="manifest" href="manifest.json?v=40">
+  <link rel="manifest" href="manifest.json">
   <title>App Forge • 2D Loft Studio</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
@@ -38,7 +38,6 @@
   <div class="max-w-lg mx-auto space-y-3 pb-12">
 
     <div class="relative rounded-3xl overflow-hidden border border-rose-500/35 shadow-2xl bg-[#140b20]">
-      <!-- Top HUD -->
       <div class="absolute top-2.5 left-2.5 right-2.5 z-20 flex items-center justify-between pointer-events-none">
         <div class="bg-black/75 backdrop-blur-md px-3 py-1 rounded-full border border-rose-400/50 text-[10px] font-black uppercase text-rose-200 pointer-events-auto">🌸 2D Loft Studio</div>
         <div class="flex items-center gap-1.5 pointer-events-auto">
@@ -47,7 +46,6 @@
         </div>
       </div>
 
-      <!-- Settings Popover -->
       <div id="settingsPopover" class="hidden absolute top-11 right-2.5 z-30 w-52 rounded-2xl bg-[#160c24]/95 border border-rose-500/45 p-3 shadow-2xl space-y-2.5 backdrop-blur-xl">
         <div class="text-[10px] font-black uppercase tracking-wider text-rose-300">Studio Settings</div>
         <div class="flex items-center justify-between">
@@ -60,14 +58,12 @@
         </div>
       </div>
 
-      <!-- 16:9 Dual-Buffer Crossfade Viewport -->
       <div id="stage2d" class="w-full aspect-video relative overflow-hidden bg-[#140b20]">
         <div id="layerA" class="absolute inset-0 transition-opacity duration-300 opacity-100"></div>
         <div id="layerB" class="absolute inset-0 transition-opacity duration-300 opacity-0"></div>
         <div id="fxGlow" class="absolute inset-0 pointer-events-none transition-all duration-500"></div>
       </div>
 
-      <!-- Hidden Until Poses Toggle Is Turned ON -->
       <div id="posesPanel" class="hidden space-y-1.5 px-3 py-2 bg-black/85 border-t border-rose-500/20">
         <div class="grid grid-cols-4 gap-1.5">
           <button id="cmdIdleBtn" type="button" class="py-1.5 rounded-lg bg-slate-800/90 border border-rose-500/30 text-[11px] font-bold text-rose-200">😌 Idle</button>
@@ -89,7 +85,6 @@
       </div>
     </div>
 
-    <!-- 1. GitHub Token -->
     <div class="glass-card rounded-2xl p-3.5 space-y-2">
       <div class="flex justify-between items-center">
         <span class="text-[10px] font-black uppercase text-amber-300">1. GitHub Token</span>
@@ -101,12 +96,8 @@
       </div>
     </div>
 
-    <!-- 2. Repo & File Selector -->
     <div class="glass-card rounded-2xl p-3.5 space-y-2.5">
-      <div class="flex justify-between items-center">
-        <span class="text-[10px] font-black uppercase text-rose-300">2. Select App Repo & File</span>
-        <button id="patchSkillTreeBtn" type="button" class="px-2.5 py-1 rounded-lg bg-rose-500/20 border border-rose-400/50 text-[10px] font-black text-rose-200 active:scale-95">⚡ Patch Skill-Tree</button>
-      </div>
+      <div class="text-[10px] font-black uppercase text-rose-300">2. Select App Repo & File</div>
       <div class="grid grid-cols-2 gap-2">
         <select id="repoSelect" class="bg-black/60 border border-rose-500/30 rounded-xl px-2.5 py-2 text-xs text-white outline-none"></select>
         <select id="fileSelect" class="bg-black/60 border border-rose-500/30 rounded-xl px-2.5 py-2 text-xs text-white outline-none"></select>
@@ -116,7 +107,7 @@
         <button id="createFileModeBtn" type="button" class="px-3.5 py-1.5 bg-rose-500/20 border border-rose-500/40 text-rose-200 font-bold rounded-xl text-xs">+ New</button>
       </div>
     </div>
-<!-- 3. Code Editor & Deploy -->
+
     <div class="glass-card rounded-2xl p-3.5 space-y-2.5">
       <div class="flex items-center justify-between">
         <span id="activePathLabel" class="text-xs font-mono font-bold text-emerald-300 truncate">No file loaded</span>
@@ -138,7 +129,7 @@
     const TOKEN_KEY = "app_forge_gh_token_v1";
     const POSES_KEY = "app_forge_poses_v1";
     const MOTION_KEY = "app_forge_motion_v1";
-    const ASSET_VER = "40";
+    const ASSET_VER = Date.now().toString();
 
     let ghUser = "", currentSha = null, isNewFile = false, introTimer = null, resetTimer = null;
     let activeLayer = "A", currentMode = "wave", deploySeq = 0;
@@ -257,7 +248,8 @@
       activeLayer = nextId === "layerA" ? "A" : "B";
       return usedFallback;
     }
-async function setMjState(mode, text, { cancelIntro = true } = {}) {
+
+    async function setMjState(mode, text, { cancelIntro = true } = {}) {
       if (cancelIntro && introTimer) {
         clearTimeout(introTimer);
         introTimer = null;
@@ -375,288 +367,7 @@ async function setMjState(mode, text, { cancelIntro = true } = {}) {
       scheduleIdleReturn(5000, `${repo}/${path} is live and ready.`);
     }
 
-    async function writeRepoFile(owner, repo, path, text, message) {
-      const cleanPath = encodeURIComponent(path).replace(/%2F/g, "/");
-      const getUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${cleanPath}`;
-      let sha = null;
-      const checkRes = await fetch(getUrl, { headers: getHeaders(), cache: "no-store" });
-      if (checkRes.ok) {
-        const existing = await checkRes.json();
-        sha = existing.sha || null;
-      }
-      const body = { message, content: toUtf8Base64(text) };
-      if (sha) body.sha = sha;
-      const putRes = await fetch(getUrl, {
-        method: "PUT",
-        headers: getHeaders(),
-        body: JSON.stringify(body)
-      });
-      if (!putRes.ok) {
-        const err = await putRes.json().catch(() => ({}));
-        throw new Error(err.message || `GitHub write failed (${putRes.status})`);
-      }
-      return putRes.json();
-    }
-
-    function buildSkillTreeDeleteScript() {
-      return `/* Auto-installed by App Forge */
-(() => {
-  if (window.__appForgeSkillTreeDeleter) return;
-  window.__appForgeSkillTreeDeleter = true;
-
-  const KEYS = ["skill_tree_state_v1", "skillTreeState", "skill_tree_data", "constellations_data"];
-  const clone = v => (typeof structuredClone === "function" ? structuredClone(v) : JSON.parse(JSON.stringify(v)));
-  const getId = x => (x && typeof x === "object" ? String(x.id ?? x.constellationId ?? x.nodeId ?? x.key ?? x.slug ?? "") : "");
-
-  function loadStore() {
-    for (const k of KEYS) {
-      const raw = localStorage.getItem(k);
-      if (!raw) continue;
-      try {
-        const p = JSON.parse(raw);
-        if (p && typeof p === "object") return { key: k, state: p };
-      } catch {}
-    }
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (!k) continue;
-      try {
-        const p = JSON.parse(localStorage.getItem(k));
-        if (p && typeof p === "object" && (Array.isArray(p.constellations) || Array.isArray(p.nodes))) {
-          return { key: k, state: p };
-        }
-      } catch {}
-    }
-    return { key: KEYS[0], state: { constellations: [], nodes: [], edges: [], activeConstellationId: null } };
-  }
-
-  function saveStore(key, nextState) {
-    localStorage.setItem(key, JSON.stringify(nextState));
-    KEYS.forEach(k => { if (localStorage.getItem(k) !== null) localStorage.setItem(k, JSON.stringify(nextState)); });
-    window.appState = nextState;
-    window.skillTreeState = nextState;
-    if (typeof window.renderApp === "function") window.renderApp(nextState);
-    if (typeof window.renderConstellations === "function") window.renderConstellations(nextState);
-    if (typeof window.renderTree === "function") window.renderTree(nextState);
-    window.dispatchEvent(new CustomEvent("skilltree:updated", { detail: { state: nextState } }));
-  }
-
-  function getConstellations(state) {
-    if (Array.isArray(state.constellations)) return state.constellations;
-    if (state.constellations && typeof state.constellations === "object") {
-      return Object.entries(state.constellations).map(([id, v]) => ({ id, ...v }));
-    }
-    return [];
-  }
-function removeConstellations(ids) {
-    const targets = new Set((Array.isArray(ids) ? ids : [ids]).map(String));
-    const { key, state } = loadStore();
-    const next = clone(state);
-    const removedNodes = new Set();
-
-    if (Array.isArray(next.constellations)) {
-      next.constellations = next.constellations.filter(c => {
-        const cid = getId(c);
-        if (targets.has(cid)) {
-          if (Array.isArray(c.nodes)) c.nodes.forEach(n => removedNodes.add(getId(n)));
-          return false;
-        }
-        return true;
-      });
-    } else if (next.constellations && typeof next.constellations === "object") {
-      for (const [k, v] of Object.entries(next.constellations)) {
-        if (targets.has(String(k)) || targets.has(getId(v))) {
-          if (Array.isArray(v?.nodes)) v.nodes.forEach(n => removedNodes.add(getId(n)));
-          delete next.constellations[k];
-        }
-      }
-    }
-
-    if (Array.isArray(next.nodes)) {
-      next.nodes = next.nodes.filter(n => {
-        const nid = getId(n);
-        const cid = String(n.constellationId ?? n.constellation ?? n.group ?? "");
-        if (targets.has(cid)) {
-          if (nid) removedNodes.add(nid);
-          return false;
-        }
-        return true;
-      });
-    }
-
-    for (const ek of ["edges", "links", "connections"]) {
-      if (Array.isArray(next[ek])) {
-        next[ek] = next[ek].filter(e => {
-          const cid = String(e.constellationId ?? e.constellation ?? "");
-          const s = String(e.source ?? e.from ?? e.sourceId ?? "");
-          const t = String(e.target ?? e.to ?? e.targetId ?? "");
-          return !targets.has(cid) && !removedNodes.has(s) && !removedNodes.has(t);
-        });
-      }
-    }
-
-    const rem = getConstellations(next);
-    const fallback = rem.length ? getId(rem[0]) : null;
-    for (const ak of ["activeConstellationId", "selectedConstellationId", "currentConstellationId"]) {
-      if (ak in next && (!next[ak] || targets.has(String(next[ak])))) next[ak] = fallback;
-    }
-
-    saveStore(key, next);
-  }
-
-  function removeNodes(ids) {
-    const targets = new Set((Array.isArray(ids) ? ids : [ids]).map(String));
-    const { key, state } = loadStore();
-    const next = clone(state);
-    if (Array.isArray(next.nodes)) next.nodes = next.nodes.filter(n => !targets.has(getId(n)));
-    if (Array.isArray(next.constellations)) {
-      next.constellations.forEach(c => {
-        if (Array.isArray(c.nodes)) c.nodes = c.nodes.filter(n => !targets.has(getId(n)));
-      });
-    }
-    for (const ek of ["edges", "links", "connections"]) {
-      if (Array.isArray(next[ek])) {
-        next[ek] = next[ek].filter(e => !targets.has(String(e.source ?? e.from ?? e.sourceId ?? "")) && !targets.has(String(e.target ?? e.to ?? e.targetId ?? "")));
-      }
-    }
-    saveStore(key, next);
-  }
-
-  function mount() {
-    if (document.getElementById("stForgeBtn")) return;
-    const btn = document.createElement("button");
-    btn.id = "stForgeBtn";
-    btn.type = "button";
-    btn.textContent = "🗑️ Delete";
-    btn.style.cssText = "position:fixed;bottom:16px;right:16px;z-index:9998;padding:10px 14px;border-radius:999px;background:#1a0f2e;color:#fda4af;border:1px solid rgba(244,63,94,0.55);font:700 12px/1 system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,0.45);cursor:pointer;";
-
-    const sheet = document.createElement("div");
-    sheet.id = "stForgeSheet";
-    sheet.style.cssText = "display:none;position:fixed;inset:0;z-index:9999;background:rgba(8,4,15,0.82);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:16px;font-family:system-ui,sans-serif;";
-    sheet.innerHTML = \`
-      <div style="width:100%;max-width:440px;max-height:82vh;overflow:auto;background:#160d26;color:#fef3c7;border:1px solid rgba(244,63,94,0.35);border-radius:20px;padding:16px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-          <strong style="font-size:14px;color:#fda4af;">Delete Constellations & Nodes</strong>
-          <button id="stForgeClose" type="button" style="background:#291947;color:#fef3c7;border:none;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;">Close</button>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-          <button id="stForgeDelChecked" type="button" style="background:#e11d48;color:#fff;border:none;border-radius:10px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;">Delete Checked</button>
-          <button id="stForgeWipeAll" type="button" style="background:#4c0519;color:#fecdd3;border:1px solid rgba(244,63,94,0.5);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;">Delete All Constellations</button>
-        </div>
-        <div id="stForgeCList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
-        <div style="font-size:11px;color:#fcd34d;margin-bottom:6px;font-weight:700;">Nodes</div>
-        <div id="stForgeNList" style="display:flex;flex-direction:column;gap:6px;max-height:170px;overflow:auto;"></div>
-      </div>\`;
-
-    function draw() {
-      const { state } = loadStore();
-      const cs = getConstellations(state);
-      const ns = Array.isArray(state.nodes) ? state.nodes : [];
-      sheet.querySelector("#stForgeCList").innerHTML = cs.length
-        ? cs.map((c, i) => {
-            const id = getId(c) || String(i);
-            const name = c.name || c.title || \`Constellation \${i + 1}\`;
-            return \`<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;background:#0e0819;padding:8px 10px;border-radius:12px;">
-              <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;flex:1;min-width:0;">
-                <input type="checkbox" class="stf-c" value="\${id}">
-                <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">\${name}</span>
-              </label>
-              <button type="button" data-fcd="\${id}" style="background:#be123c;color:#fff;border:none;border-radius:8px;padding:5px 9px;font-size:11px;font-weight:700;cursor:pointer;">Delete</button>
-            </div>\`;
-          }).join("")
-        : \`<div style="font-size:12px;color:#a1a1aa;">No constellations</div>\`;
-
-      sheet.querySelector("#stForgeNList").innerHTML = ns.length
-        ? ns.map((n, i) => {
-            const id = getId(n) || String(i);
-            const name = n.title || n.name || n.label || \`Node \${i + 1}\`;
-            return \`<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;background:#0e0819;padding:6px 10px;border-radius:10px;font-size:11px;">
-              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;min-width:0;">
-                <input type="checkbox" class="stf-n" value="\${id}">
-                <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">\${name}</span>
-              </label>
-              <button type="button" data-fnd="\${id}" style="background:#3f3f46;color:#fff;border:none;border-radius:7px;padding:4px 8px;font-size:10px;font-weight:700;cursor:pointer;">Remove</button>
-            </div>\`;
-          }).join("")
-        : \`<div style="font-size:11px;color:#a1a1aa;">No nodes</div>\`;
-    }
-
-    btn.addEventListener("click", () => { draw(); sheet.style.display = "flex"; });
-    sheet.querySelector("#stForgeClose").addEventListener("click", () => { sheet.style.display = "none"; });
-    sheet.addEventListener("click", e => {
-      const c = e.target.closest("[data-fcd]");
-      if (c) { removeConstellations([c.getAttribute("data-fcd")]); draw(); return; }
-      const n = e.target.closest("[data-fnd]");
-      if (n) { removeNodes([n.getAttribute("data-fnd")]); draw(); }
-    });
-    sheet.querySelector("#stForgeDelChecked").addEventListener("click", () => {
-      const cIds = [...sheet.querySelectorAll(".stf-c:checked")].map(x => x.value);
-      const nIds = [...sheet.querySelectorAll(".stf-n:checked")].map(x => x.value);
-      if (cIds.length) removeConstellations(cIds);
-      if (nIds.length) removeNodes(nIds);
-      draw();
-    });
-    sheet.querySelector("#stForgeWipeAll").addEventListener("click", () => {
-      const { state } = loadStore();
-      const allIds = getConstellations(state).map(getId).filter(Boolean);
-      if (allIds.length) removeConstellations(allIds);
-      draw();
-    });
-
-    document.body.appendChild(btn);
-    document.body.appendChild(sheet);
-  }
-
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mount);
-  else mount();
-})();`;
-    }
-
-    async function patchSkillTreeRepo() {
-      if (!ghUser) await initConnection();
-      if (!ghUser || !getToken()) return alert("Connect your GitHub token first.");
-      const targetRepo = "Skill-Tree";
-      setBadge("Patching Skill-Tree...", "busy");
-      await setMjState("hack", "Patching Skill-Tree delete tool directly via GitHub...");
-
-      try {
-        await writeRepoFile(
-          ghUser,
-          targetRepo,
-          "app-forge-deleter.js",
-          buildSkillTreeDeleteScript(),
-          "Add App Forge Skill-Tree deleter script"
-        );
-
-        const idxUrl = `https://api.github.com/repos/${ghUser}/${targetRepo}/contents/index.html`;
-        const idxRes = await fetch(idxUrl, { headers: getHeaders(), cache: "no-store" });
-        if (!idxRes.ok) throw new Error("Could not read Skill-Tree/index.html");
-        const idxData = await idxRes.json();
-        const currentHtml = fromUtf8Base64(idxData.content || "");
-        const tag = `<script src="./app-forge-deleter.js?v=1" defer></script>`;
-
-        if (!currentHtml.includes("app-forge-deleter.js")) {
-          const updatedHtml = /<\/body>/i.test(currentHtml)
-            ? currentHtml.replace(/<\/body>/i, `${tag}\n</body>`)
-            : `${currentHtml}\n${tag}`;
-          await writeRepoFile(
-            ghUser,
-            targetRepo,
-            "index.html",
-            updatedHtml,
-            "Wire App Forge deleter into Skill-Tree index.html"
-          );
-        }
-
-        if ($("repoSelect").value === targetRepo) await loadRepoFiles();
-        triggerUpdateActive(targetRepo, "app-forge-deleter.js", "🟢 Skill-Tree Patched!", "Skill-Tree delete tool installed!");
-      } catch (err) {
-        setBadge("Patch Error");
-        await setMjState("idle", err.message || "Patch failed.");
-        alert("Patch Error: " + (err.message || err));
-      }
-    }
-async function deployFile() {
+    async function deployFile() {
       const repo = $("repoSelect").value;
       const path = isNewFile ? $("newFileName").value.trim() : $("fileSelect").value;
       if (!repo || !path) return alert("Select or name a file first.");
@@ -738,7 +449,6 @@ async function deployFile() {
         initConnection();
       };
       $("toggleTokenBtn").onclick = () => $("tokenWrap").classList.toggle("hidden");
-      $("patchSkillTreeBtn").onclick = patchSkillTreeRepo;
       $("repoSelect").onchange = loadRepoFiles;
       $("fileSelect").onchange = () => loadFileContent($("fileSelect").value);
       $("createFileModeBtn").onclick = () => {
