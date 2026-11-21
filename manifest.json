@@ -1,16 +1,15 @@
 {
-  "name": "App Forge • Cozy Loft Studio",
+  "name": "App Forge",
   "short_name": "App Forge",
-  "start_url": "/App-Forge/",
-  "scope": "/App-Forge/",
+  "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#140e1a",
-  "theme_color": "#140e1a",
+  "background_color": "#09050f",
+  "theme_color": "#120b1c",
   "icons": [
     {
-      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%231a1124'/%3E%3Ccircle cx='256' cy='256' r='190' fill='none' stroke='%23f43f5e' stroke-width='22'/%3E%3Cpath d='M275 110L165 275h95l-25 127 115-165h-95z' fill='%23fbbf24'/%3E%3C/svg%3E",
+      "src": "./app-icon.png?v=2",
       "sizes": "512x512",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ]
