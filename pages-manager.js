@@ -67,7 +67,7 @@
       log('3. Checking GitHub Pages status...');
       let pgRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/pages`, { headers, cache: 'no-store' });
       if (pgRes.status === 404) {
-        log(`Pages disabled. Enabling on branch "${branch}" (root)...`, 'text-amber-300');
+        log(`Pages disabled. Enabling on branch ${branch} (root)...`, 'text-amber-300');
         pgRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/pages`, {
           method: 'POST', headers, body: JSON.stringify({ source: { branch, path: '/' } })
         });
