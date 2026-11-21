@@ -1,54 +1,43 @@
 (() => {
-  if (window.__afCelebrateSwapV2) return;
-  window.__afCelebrateSwapV2 = true;
+  if (window.__afCelebrateSwapV3) return;
+  window.__afCelebrateSwapV3 = true;
 
-  const NEW_KEY = 'af_celebrate_new_file_v1';
-  const OLD_KEY = 'af_celebrate_old_file_v1';
+  const MAP_KEY = 'af_pose_media_map_v3';
   let repoMedia = [];
+
+  function getSavedMap() {
+    try { return JSON.parse(localStorage.getItem(MAP_KEY) || '{}'); } catch { return {}; }
+  }
+  function setSavedMap(map) {
+    try { localStorage.setItem(MAP_KEY, JSON.stringify(map)); } catch {}
+  }
 
   async function loadRepoMediaList() {
     try {
       const r = await fetch('https://api.github.com/repos/badpeachring/App-Forge/git/trees/HEAD?recursive=1', { cache: 'no-store' });
       if (!r.ok) return [];
       const data = await r.json();
-      return (data.tree || [])
+      const all = (data.tree || [])
         .filter(i => i.type === 'blob' && /\.(mp4|webm|mov|webp|png|jpe?g|gif)$/i.test(i.path))
         .map(i => i.path);
+      // Sort videos (.mp4/.webm/.mov) ahead of static images
+      return all.sort((a, b) => {
+        const av = /\.(mp4|webm|mov)$/i.test(a) ? 0 : 1;
+        const bv = /\.(mp4|webm|mov)$/i.test(b) ? 0 : 1;
+        return av - bv || a.localeCompare(b);
+      });
     } catch {
       return [];
     }
   }
 
-  function resolveFiles(files) {
-    const lower = files.map(f => ({ raw: f, low: f.toLowerCase() }));
-    let savedNew = localStorage.getItem(NEW_KEY) || '';
-    let savedOld = localStorage.getItem(OLD_KEY) || '';
-
-    if (savedNew && !files.includes(savedNew)) savedNew = '';
-    if (savedOld && !files.includes(savedOld)) savedOld = '';
-
-    if (!savedNew) {
-      const hit = lower.find(f => f.low.includes('celebrate') && (f.low.includes('v2') || f.low.includes('new') || f.low.includes('2')));
-      if (hit) savedNew = hit.raw;
-    }
-    if (!savedOld) {
-      const hit = lower.find(f => (f.low.includes('bikini') || f.low.includes('celebrate')) && f.raw !== savedNew);
-      if (hit) savedOld = hit.raw;
-    }
-    if (!savedNew && savedOld) savedNew = savedOld;
-
-    if (savedNew) localStorage.setItem(NEW_KEY, savedNew);
-    if (savedOld) localStorage.setItem(OLD_KEY, savedOld);
-    return { newFile: savedNew, oldFile: savedOld };
-  }
-
   function playMediaFile(filename, label) {
     const stage = document.getElementById('stage2d');
     const speech = document.getElementById('mjSpeech')?.firstElementChild;
-    if (!stage) return;
+    if (!stage) return false;
     if (!filename) {
-      if (speech) speech.textContent = '💬 "No video uploaded yet — use 📤 Upload Asset or pick a file in ⚙️ settings."';
-      return;
+      if (speech) speech.textContent = '💬 "No video assigned yet — upload via 📤 Upload Asset and pick it in ⚙️."';
+      return false;
     }
 
     const url = `${filename}?v=${Date.now()}`;
@@ -64,7 +53,7 @@
     }
 
     el.onerror = () => {
-      if (speech) speech.textContent = `💬 "Failed to load ${filename} — check ⚙️ video mapping."`;
+      if (speech) speech.textContent = `💬 "Could not load ${filename} — check ⚙️ pose mapping."`;
     };
 
     const layerA = document.getElementById('layerA');
@@ -83,73 +72,171 @@
 
     if (isVideo) el.play().catch(() => {});
     if (speech && label) speech.textContent = `💬 "${label}"`;
+    return true;
+  }
+
+  function autoPopulateDefaults(files, map) {
+    const videos = files.filter(f => /\.(mp4|webm|mov)$/i.test(f));
+    const pool = videos.length ? videos : files;
+    const lowPool = pool.map(f => ({ raw: f, low: f.toLowerCase() }));
+
+    // Clear any stale image mapping if a matching video exists
+    if (map.celebrate && !/\.(mp4|webm|mov)$/i.test(map.celebrate) && videos.length) delete map.celebrate;
+    if (map.bikini && !/\.(mp4|webm|mov)$/i.test(map.bikini) && videos.length) delete map.bikini;
+
+    if (!map.celebrate || !files.includes(map.celebrate)) {
+      const hit = lowPool.find(f => f.low.includes('juice') || (f.low.includes('celebrate') && (f.low.includes('v2') || f.low.includes('new') || f.low.includes('2')))) || lowPool.find(f => f.low.includes('celebrate'));
+      if (hit) map.celebrate = hit.raw;
+    }
+    if (!map.bikini || !files.includes(map.bikini)) {
+      const hit = lowPool.find(f => f.low.includes('bikini')) || lowPool.find(f => f.low.includes('celebrate') && f.raw !== map.celebrate);
+      if (hit) map.bikini = hit.raw;
+    }
+    setSavedMap(map);
+    return map;
   }
 
   async function init() {
     repoMedia = await loadRepoMediaList();
-    let { newFile, oldFile } = resolveFiles(repoMedia);
-
-    document.getElementById('cmdCelebrateBtn')?.remove();
+    const map = autoPopulateDefaults(repoMedia, getSavedMap());
 
     const posesPanel = document.getElementById('posesPanel');
     const rows = posesPanel ? posesPanel.querySelectorAll('.grid') : [];
     const bottomRow = rows[rows.length - 1];
-    if (bottomRow && !document.getElementById('cmdBikiniCelebrateBtn')) {
-      const btn = document.createElement('button');
-      btn.id = 'cmdBikiniCelebrateBtn';
-      btn.type = 'button';
-      btn.textContent = '👙 Bikini Cel...';
-      btn.className = 'py-1.5 rounded-lg bg-pink-950/90 border border-pink-500/50 text-[11px] font-bold text-pink-200 truncate';
-      btn.onclick = () => {
-        const file = localStorage.getItem(OLD_KEY) || oldFile;
-        playMediaFile(file, 'Bikini Celebrate!');
+
+    // Ensure main Celebrate button is present and wired
+    let mainCelBtn = document.getElementById('cmdCelebrateBtn');
+    if (!mainCelBtn && bottomRow) {
+      mainCelBtn = document.createElement('button');
+      mainCelBtn.id = 'cmdCelebrateBtn';
+      mainCelBtn.type = 'button';
+      mainCelBtn.textContent = '🎉 Celebrate';
+      mainCelBtn.className = 'py-1.5 rounded-lg bg-emerald-950/90 border border-emerald-500/50 text-[11px] font-bold text-emerald-200 truncate';
+      bottomRow.appendChild(mainCelBtn);
+    }
+    if (mainCelBtn) {
+      mainCelBtn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const cur = getSavedMap();
+        playMediaFile(cur.celebrate, 'Celebrate!');
       };
-      bottomRow.appendChild(btn);
-      bottomRow.classList.remove('grid-cols-4');
-      bottomRow.classList.add('grid-cols-5');
     }
 
+    // Ensure Bikini Celebrate button sits right beside it
+    let bikiniBtn = document.getElementById('cmdBikiniCelebrateBtn');
+    if (!bikiniBtn && bottomRow) {
+      bikiniBtn = document.createElement('button');
+      bikiniBtn.id = 'cmdBikiniCelebrateBtn';
+      bikiniBtn.type = 'button';
+      bikiniBtn.textContent = '👙 Bikini Cel...';
+      bikiniBtn.className = 'py-1.5 rounded-lg bg-pink-950/90 border border-pink-500/50 text-[11px] font-bold text-pink-200 truncate';
+      bottomRow.appendChild(bikiniBtn);
+    }
+    if (bikiniBtn) {
+      bikiniBtn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const cur = getSavedMap();
+        playMediaFile(cur.bikini, 'Bikini Celebrate!');
+      };
+    }
+
+    if (bottomRow) {
+      const count = bottomRow.querySelectorAll('button').length;
+      bottomRow.classList.remove('grid-cols-3', 'grid-cols-4', 'grid-cols-5');
+      bottomRow.classList.add(count >= 5 ? 'grid-cols-5' : 'grid-cols-4');
+    }
+
+    // Collect all pose buttons in #posesPanel so any button can be assigned a video
+    const poseSlots = [
+      { key: 'celebrate', label: '🎉 Celebrate (Main / Juice)' },
+      { key: 'bikini', label: '👙 Bikini Celebrate' }
+    ];
+
+    if (posesPanel) {
+      posesPanel.querySelectorAll('button').forEach(btn => {
+        if (btn.id === 'cmdCelebrateBtn' || btn.id === 'cmdBikiniCelebrateBtn') return;
+        const rawLabel = (btn.textContent || '').trim();
+        if (!rawLabel) return;
+        const slug = 'pose_' + rawLabel.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+        if (!poseSlots.some(s => s.key === slug)) {
+          poseSlots.push({ key: slug, label: rawLabel });
+        }
+        // Intercept pose click if user mapped a custom video to this pose button
+        btn.addEventListener('click', (e) => {
+          const cur = getSavedMap();
+          if (cur[slug]) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            playMediaFile(cur[slug], rawLabel);
+          }
+        }, true);
+      });
+    }
+
+    // Build Universal Pose Video Studio inside #settingsPopover
     const pop = document.getElementById('settingsPopover');
-    if (pop && !document.getElementById('afCelebrateMapperBox')) {
+    if (pop) {
+      document.getElementById('afCelebrateMapperBox')?.remove();
       const box = document.createElement('div');
       box.id = 'afCelebrateMapperBox';
-      box.className = 'pt-2 mt-2 border-t border-fuchsia-500/25 space-y-1.5';
-      const options = ['<option value="">-- Select Media File --</option>']
-        .concat(repoMedia.map(f => `<option value="${f}">${f}</option>`))
-        .join('');
+      box.className = 'pt-2 mt-2 border-t border-fuchsia-500/25 space-y-2 max-h-64 overflow-y-auto pr-1';
 
-      box.innerHTML = `
-        <button id='testCurrentCelebrateBtn' type='button' class='w-full py-1.5 rounded-xl bg-emerald-950/85 border border-emerald-500/45 text-[11px] font-bold text-emerald-200'>🎉 Test New Celebrate</button>
-        <div class='text-[10px] text-slate-400 font-bold'>New Celebrate File:</div>
-        <select id='selNewCel' class='w-full bg-black/80 border border-slate-700 rounded-lg px-2 py-1 text-[10px] text-white'>${options}</select>
-        <div class='text-[10px] text-slate-400 font-bold'>Bikini Celebrate File:</div>
-        <select id='selOldCel' class='w-full bg-black/80 border border-slate-700 rounded-lg px-2 py-1 text-[10px] text-white'>${options}</select>
-      `;
+      const makeOptions = (selectedVal) => {
+        const opts = ['<option value="">-- Default / None --</option>'];
+        repoMedia.forEach(f => {
+          const tag = /\.(mp4|webm|mov)$/i.test(f) ? '🎬 ' : '🖼️ ';
+          const sel = f === selectedVal ? 'selected' : '';
+          opts.push(`<option value="${f}" ${sel}>${tag}${f}</option>`);
+        });
+        return opts.join('');
+      };
+
+      const curMap = getSavedMap();
+      box.innerHTML = `<div class='text-[10px] font-black uppercase tracking-wider text-fuchsia-300'>🎬 Pose Video Studio (${repoMedia.length} files found)</div>` +
+        poseSlots.map(slot => `
+          <div class='space-y-1 bg-black/40 p-1.5 rounded-lg border border-slate-800'>
+            <div class='flex items-center justify-between gap-1'>
+              <span class='text-[10px] text-slate-200 font-bold truncate'>${slot.label}</span>
+              <button type='button' data-test-pose='${slot.key}' data-test-label='${slot.label}' class='px-2 py-0.5 rounded bg-sky-500/25 border border-sky-400/40 text-sky-200 font-bold text-[10px] shrink-0'>▶ Play</button>
+            </div>
+            <select data-map-pose='${slot.key}' class='w-full bg-black/85 border border-slate-700 rounded px-1.5 py-1 text-[10px] text-white'>${makeOptions(curMap[slot.key] || '')}</select>
+          </div>
+        `).join('');
+
       pop.appendChild(box);
 
-      const selNew = document.getElementById('selNewCel');
-      const selOld = document.getElementById('selOldCel');
-      if (newFile) selNew.value = newFile;
-      if (oldFile) selOld.value = oldFile;
+      box.querySelectorAll('[data-map-pose]').forEach(sel => {
+        sel.onchange = () => {
+          const updated = getSavedMap();
+          const k = sel.getAttribute('data-map-pose');
+          if (sel.value) updated[k] = sel.value;
+          else delete updated[k];
+          setSavedMap(updated);
+        };
+      });
 
-      selNew.onchange = () => localStorage.setItem(NEW_KEY, selNew.value);
-      selOld.onchange = () => localStorage.setItem(OLD_KEY, selOld.value);
-
-      document.getElementById('testCurrentCelebrateBtn').onclick = () => {
-        pop.classList.add('hidden');
-        const file = localStorage.getItem(NEW_KEY) || newFile;
-        playMediaFile(file, 'Celebrating!');
-      };
+      box.querySelectorAll('[data-test-pose]').forEach(btn => {
+        btn.onclick = () => {
+          pop.classList.add('hidden');
+          const k = btn.getAttribute('data-test-pose');
+          const lbl = btn.getAttribute('data-test-label');
+          const updated = getSavedMap();
+          playMediaFile(updated[k], lbl);
+        };
+      });
     }
 
+    // Hook automatic deploy celebrations
     const origSet = window.setMjState;
-    if (typeof origSet === 'function' && !window.__celebrateHooked) {
-      window.__celebrateHooked = true;
+    if (typeof origSet === 'function' && !window.__celebrateHookedV3) {
+      window.__celebrateHookedV3 = true;
       window.setMjState = async (mode, text, opts) => {
         await origSet(mode, text, opts);
         if (mode === 'celebrate') {
-          const file = localStorage.getItem(NEW_KEY) || newFile;
-          playMediaFile(file, text || 'Celebrating!');
+          const cur = getSavedMap();
+          if (cur.celebrate) playMediaFile(cur.celebrate, text || 'Celebrating!');
         }
       };
     }
