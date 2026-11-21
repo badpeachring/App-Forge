@@ -56,10 +56,12 @@
       if (speech) speech.textContent = `💬 "Could not load ${filename} — check ⚙️ pose mapping."`;
     };
 
+    stage.querySelectorAll('video').forEach(v => { try { v.pause(); v.removeAttribute('src'); v.load(); } catch {} });
     const layerA = document.getElementById('layerA');
     const layerB = document.getElementById('layerB');
     if (layerA && layerB) {
       layerA.innerHTML = '';
+      layerB.innerHTML = '';
       layerA.appendChild(el);
       layerA.classList.remove('opacity-0');
       layerA.classList.add('opacity-100');
