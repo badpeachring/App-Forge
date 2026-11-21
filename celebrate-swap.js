@@ -88,8 +88,8 @@
       const hit = lowPool.find(f => f.low.includes('juice') || (f.low.includes('celebrate') && (f.low.includes('v2') || f.low.includes('new') || f.low.includes('2')))) || lowPool.find(f => f.low.includes('celebrate'));
       if (hit) map.celebrate = hit.raw;
     }
-    if (!map.bikini || !files.includes(map.bikini)) {
-      const hit = lowPool.find(f => f.low.includes('bikini')) || lowPool.find(f => f.low.includes('celebrate') && f.raw !== map.celebrate);
+    if (!map.bikini || !files.includes(map.bikini) || map.bikini === map.celebrate) {
+      const hit = lowPool.find(f => f.low.includes('bikini') && f.raw !== map.celebrate) || lowPool.find(f => f.raw !== map.celebrate);
       if (hit) map.bikini = hit.raw;
     }
     setSavedMap(map);
