@@ -93,7 +93,7 @@
     try { new Function(content); } catch (err) {
       issues.push({ line: content.split('\n').length, msg: `SyntaxError: ${err.message}` });
     }
-    checkBalanced(content).slice(0, 3).forEach(d => issues.push(d));
+    if (issues.length) checkBalanced(content).slice(0, 3).forEach(d => issues.push(d));
     if (htmlIds && htmlIds.size) {
       const missing = new Set();
       const re = /document\.getElementById\(\s*["']([^"']+)["']\s*\)/g;
