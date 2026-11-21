@@ -1,20 +1,20 @@
 {
   "name": "App Forge",
   "short_name": "App Forge",
-  "start_url": "./",
-  "scope": "./",
+  "start_url": "/App-Forge/",
+  "scope": "/App-Forge/",
   "display": "standalone",
   "background_color": "#09050f",
   "theme_color": "#120b1c",
   "icons": [
     {
-      "src": "./1000005057.jpg?v=4",
+      "src": "/App-Forge/1000005057.jpg?v=5",
       "sizes": "1024x1024",
       "type": "image/jpeg",
       "purpose": "any"
     },
     {
-      "src": "./1000005057.jpg?v=4",
+      "src": "/App-Forge/1000005057.jpg?v=5",
       "sizes": "1024x1024",
       "type": "image/jpeg",
       "purpose": "maskable"
