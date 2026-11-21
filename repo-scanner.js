@@ -114,7 +114,9 @@
       const p = JSON.parse(content);
       if (path === 'manifest.json' && Array.isArray(p.icons)) {
         p.icons.forEach(ic => {
-          const src = String(ic.src || '').split('?')[0].replace(/^\.?\//, '');
+          const rawSrc = String(ic.src || '').trim();
+          if (!rawSrc || /^(https?:|data:)/i.test(rawSrc)) return;
+          const src = rawSrc.split('?')[0].replace(/^\.?\//, '');
           if (src && !repoFileSet.has(src)) issues.push({ line: null, msg: `manifest.json icon missing: "${ic.src}"` });
         });
       }
