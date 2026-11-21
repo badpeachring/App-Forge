@@ -1,16 +1,17 @@
 {
   "name": "App Forge",
   "short_name": "App Forge",
-  "start_url": "./index.html",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#09050f",
   "theme_color": "#120b1c",
   "icons": [
     {
-      "src": "./app-icon.png?v=2",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "src": "./1000005057.jpg",
+      "sizes": "1024x1024",
+      "type": "image/jpeg",
+      "purpose": "any"
     }
   ]
 }
