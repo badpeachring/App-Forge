@@ -1,8 +1,10 @@
 (() => {
-  if (window.__afUxGuideLoaded) return;
-  window.__afUxGuideLoaded = true;
+  if (window.__afUxGuideV2) return;
+  window.__afUxGuideV2 = true;
 
   const BUTTON_SUBTITLES = {
+    afScanRepoBtn: ['🔍 Scan v2', 'Audit repo for bugs & snippets'],
+    afPatchRunnerBtn: ['⚡ Patch', 'Apply multi-file JSON fixes'],
     afTimeBtn: ['⏪ Time Machine', 'Undo bad deploys in 1 tap'],
     afScafBtn: ['🏗️ New App', 'Create repo + GitHub Pages'],
     afUploadBtn: ['📤 Upload Asset', 'Push videos & images to repo'],
@@ -19,12 +21,45 @@
     'JSON Patch Runner': 'Paste a multi-file JSON patch from chat. Always tap Dry Run first to verify all matches pass, then tap Execute Patch to deploy.'
   };
 
+  function layoutTopButtons() {
+    const createBtn = document.getElementById('createFileModeBtn');
+    const scanBtn = document.getElementById('afScanRepoBtn');
+    const patchBtn = document.getElementById('afPatchRunnerBtn');
+    const inputRow = createBtn?.parentElement;
+    if (!inputRow) return;
+
+    if (createBtn && !createBtn.dataset.uxFixed) {
+      createBtn.dataset.uxFixed = '1';
+      createBtn.classList.add('whitespace-nowrap', 'shrink-0', 'px-3');
+      createBtn.textContent = '+ New';
+    }
+
+    if (!scanBtn && !patchBtn) return;
+
+    let grid = document.getElementById('afTopToolsGrid');
+    if (!grid) {
+      grid = document.createElement('div');
+      grid.id = 'afTopToolsGrid';
+      grid.className = 'grid grid-cols-2 gap-1.5 mt-2';
+      inputRow.insertAdjacentElement('afterend', grid);
+    }
+
+    if (scanBtn && scanBtn.parentElement !== grid) {
+      scanBtn.className = 'w-full py-2 px-2 bg-sky-500/20 border border-sky-400/45 text-sky-200 font-bold rounded-xl text-xs';
+      grid.appendChild(scanBtn);
+    }
+    if (patchBtn && patchBtn.parentElement !== grid) {
+      patchBtn.className = 'w-full py-2 px-2 bg-amber-500/20 border border-amber-400/50 text-amber-200 font-bold rounded-xl text-xs';
+      grid.appendChild(patchBtn);
+    }
+  }
+
   function upgradeButtons() {
     Object.entries(BUTTON_SUBTITLES).forEach(([id, [title, sub]]) => {
       const btn = document.getElementById(id);
       if (!btn || btn.dataset.uxUpgraded) return;
       btn.dataset.uxUpgraded = '1';
-      btn.classList.add('flex', 'flex-col', 'items-center', 'justify-center', 'px-2', 'py-2', 'leading-tight');
+      btn.classList.add('flex', 'flex-col', 'items-center', 'justify-center', 'px-2', 'py-2', 'leading-tight', 'text-center');
       btn.innerHTML = `<span class='font-black text-xs'>${title}</span><span class='text-[10px] font-normal opacity-75 mt-0.5'>${sub}</span>`;
     });
   }
@@ -48,9 +83,11 @@
   }
 
   function start() {
+    layoutTopButtons();
     upgradeButtons();
     injectModalGuides();
     const obs = new MutationObserver(() => {
+      layoutTopButtons();
       upgradeButtons();
       injectModalGuides();
     });
