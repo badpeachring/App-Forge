@@ -182,7 +182,8 @@
   }
 
   function mountUI() {
-    if (document.getElementById('afScanRepoBtn')) return;
+    const existing = document.getElementById('afScanRepoBtn');
+    if (existing) existing.remove();
     const row = document.getElementById('createFileModeBtn')?.parentElement;
     if (!row) return;
     const btn = document.createElement('button');
@@ -192,7 +193,9 @@
     btn.className = 'px-3 py-1.5 bg-sky-500/20 border border-sky-400/45 text-sky-200 font-bold rounded-xl text-xs shrink-0';
     row.appendChild(btn);
 
-    const modal = document.createElement('div');
+    let modal = document.getElementById('afScannerModal');
+    if (modal) modal.remove();
+    modal = document.createElement('div');
     modal.id = 'afScannerModal';
     modal.className = 'hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4';
     modal.innerHTML = `<div class="w-full max-w-lg rounded-2xl bg-[#120b1c] border border-sky-500/40 p-4 space-y-3 shadow-2xl"><div class="flex items-center justify-between gap-2"><span class="text-xs font-black uppercase tracking-wider text-sky-300">🔍 Context Scanner v2</span><div class="flex gap-1.5"><button id="afCopyScanBtn" type="button" class="px-2.5 py-1 rounded-lg bg-amber-400 text-slate-950 font-black text-[11px]">Copy Report</button><button id="afCloseScanBtn" type="button" class="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-200 font-bold text-[11px]">Close</button></div></div><div id="afScanStatus" class="text-[11px] font-mono text-emerald-300">Ready...</div><textarea id="afScanOutput" readonly rows="16" class="w-full bg-[#07040b] border border-sky-500/25 rounded-xl p-3 text-[10px] text-slate-100 font-mono leading-relaxed outline-none"></textarea></div>`;
