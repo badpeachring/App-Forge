@@ -18,6 +18,13 @@
     return btoa(bin);
   }
 
+  function decodeB64(b64) {
+    const bin = atob(b64.replace(/\s/g, ''));
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  }
+
   function makeStarterIconB64(title) {
     const cv = document.createElement('canvas');
     cv.width = 512; cv.height = 512;
@@ -39,18 +46,19 @@
     return (await r.json()).login;
   }
 
-  function detectTargetRepo(rawText) {
-    if (!rawText) return '';
-    const headerMatch = rawText.match(/\/\/\s*TARGET:\s*([a-zA-Z0-9._-]+)/i);
-    if (headerMatch) return headerMatch[1];
+  function detectTargets(rawText) {
+    if (!rawText) return [];
     try {
       const obj = JSON.parse(rawText);
-      if (obj && typeof obj.repo === 'string' && obj.repo.trim()) return obj.repo.trim();
+      if (Array.isArray(obj.patches)) {
+        return [...new Set(obj.patches.map(p => p?.repo?.trim()).filter(Boolean))];
+      }
+      if (typeof obj.repo === 'string' && obj.repo.trim()) return [obj.repo.trim()];
     } catch {
-      const m = rawText.match(/"repo"\s*:\s*"([^"]+)"/);
-      if (m) return m[1].trim();
+      const matches = [...rawText.matchAll(/"repo"\s*:\s*"([^"]+)"/g)].map(m => m[1].trim());
+      if (matches.length) return [...new Set(matches)];
     }
-    return '';
+    return [];
   }
 
   function syncRepoDropdown(targetRepo) {
@@ -70,6 +78,41 @@
     sel.value = targetRepo;
     sel.dispatchEvent(new Event('change', { bubbles: true }));
     return true;
+  }
+
+  async function executeBatchPatches(patches, logFn) {
+    const owner = await getOwner();
+    const headers = getHeaders();
+    for (const p of patches) {
+      const repo = p.repo;
+      logFn(`📦 Patching ${repo} (${(p.ops || []).length} ops)...`, 'text-cyan-300');
+      for (const op of (p.ops || [])) {
+        const url = `https://api.github.com/repos/${owner}/${repo}/contents/${op.file}`;
+        let sha = null;
+        let existing = '';
+        const getRes = await fetch(url, { headers, cache: 'no-store' });
+        if (getRes.ok) {
+          const fd = await getRes.json();
+          sha = fd.sha;
+          existing = decodeB64(fd.content || '');
+        }
+        let nextContent = op.content || '';
+        if (op.action === 'append') {
+          if (op.before && existing.includes(op.before)) {
+            nextContent = existing.replace(op.before, `${op.content}\n${op.before}`);
+          } else {
+            nextContent = existing + '\n' + op.content;
+          }
+        } else if (op.action === 'replace' && op.find) {
+          nextContent = existing.replace(op.find, op.content);
+        }
+        const body = { message: p.commitMessage || `Batch patch ${op.file}`, content: encodeB64(nextContent) };
+        if (sha) body.sha = sha;
+        const putRes = await fetch(url, { method: 'PUT', headers, body: JSON.stringify(body) });
+        if (!putRes.ok) throw new Error(`${repo}/${op.file} failed (HTTP ${putRes.status})`);
+        logFn(`  ✅ ${repo}/${op.file} committed`, 'text-emerald-300');
+      }
+    }
   }
 
   let pollTimer = null;
@@ -136,11 +179,13 @@
         const n = raw.length;
         const c = $('afCharCount');
         if (c) { c.textContent = `${n.toLocaleString()} chars`; c.className = n >= 19500 ? 'text-[10px] font-mono text-amber-300 font-bold' : 'text-[10px] font-mono text-slate-400'; }
-        const detected = detectTargetRepo(raw);
+        const targets = detectTargets(raw);
         const banner = $('afTargetBanner');
-        if (detected) {
-          syncRepoDropdown(detected);
-          if (banner) banner.textContent = `🎯 Auto-Target Locked: ${detected}`;
+        if (targets.length > 1) {
+          if (banner) banner.textContent = `🎯 Multi-App Batch (${targets.length}): ${targets.join(', ')}`;
+        } else if (targets.length === 1) {
+          syncRepoDropdown(targets[0]);
+          if (banner) banner.textContent = `🎯 Auto-Target Locked: ${targets[0]}`;
         } else if (banner) {
           banner.textContent = `🎯 Target: ${getRepo() || 'Paste JSON to auto-detect'}`;
         }
@@ -165,11 +210,34 @@
       }
       if (/Dry Run|Execute Patch/i.test(b.textContent) && !b.dataset.targetHook) {
         b.dataset.targetHook = '1';
-        b.addEventListener('click', () => {
-          const det = detectTargetRepo(ta.value);
-          if (det) syncRepoDropdown(det);
+        b.addEventListener('click', async ev => {
+          let parsed = null;
+          try { parsed = JSON.parse(ta.value); } catch {}
+          if (parsed && Array.isArray(parsed.patches)) {
+            ev.preventDefault();
+            ev.stopImmediatePropagation();
+            const logBox = modal.querySelector('pre, .font-mono:last-of-type') || $('afTargetBanner');
+            const logFn = msg => { if (logBox) logBox.textContent = msg; };
+            if (/Dry Run/i.test(b.textContent)) {
+              const totalOps = parsed.patches.reduce((s, p) => s + (p.ops?.length || 0), 0);
+              logFn(`✅ Multi-App Dry Run: ${parsed.patches.length} apps, ${totalOps} ops ready.`);
+              return;
+            }
+            try {
+              await executeBatchPatches(parsed.patches, logFn);
+              const lastRepo = parsed.patches[parsed.patches.length - 1]?.repo;
+              if (lastRepo) { syncRepoDropdown(lastRepo); startPagesPoll(lastRepo); }
+              logFn(`🚀 Multi-App Batch Complete (${parsed.patches.length} apps updated)!`);
+              setTimeout(() => clearPatchBox(ta), 2500);
+            } catch (err) {
+              logFn('❌ Batch Error: ' + err.message);
+            }
+            return;
+          }
+          const targets = detectTargets(ta.value);
+          if (targets[0]) syncRepoDropdown(targets[0]);
           if (/Execute Patch/i.test(b.textContent)) {
-            const target = det || getRepo();
+            const target = targets[0] || getRepo();
             setTimeout(() => startPagesPoll(target), 3000);
             setTimeout(() => clearPatchBox(ta), 2500);
           }
