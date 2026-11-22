@@ -18,6 +18,21 @@
     return btoa(bin);
   }
 
+  function makeStarterIconB64(title) {
+    const cv = document.createElement('canvas');
+    cv.width = 512; cv.height = 512;
+    const ctx = cv.getContext('2d');
+    const g = ctx.createLinearGradient(0, 0, 512, 512);
+    g.addColorStop(0, '#3b0764'); g.addColorStop(0.5, '#09050f'); g.addColorStop(1, '#083344');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, 512, 512);
+    ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 16;
+    ctx.beginPath(); ctx.arc(256, 256, 170, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = '#f8fafc'; ctx.font = '900 150px sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText((title || 'AF').slice(0, 2).toUpperCase(), 256, 268);
+    return cv.toDataURL('image/png').split(',')[1];
+  }
+
   async function getOwner() {
     const r = await fetch('https://api.github.com/user', { headers: getHeaders(), cache: 'no-store' });
     if (!r.ok) throw new Error('Connect GitHub token first.');
@@ -114,17 +129,25 @@
         name: title, short_name: title, start_url: `/${repo}/`, scope: `/${repo}/`,
         display: 'standalone', background_color: '#09090b', theme_color: '#18181b',
         icons: [
-          { src: `/${repo}/icon.png`, sizes: '512x512', type: 'image/png', purpose: 'any' },
-          { src: `/${repo}/icon.png`, sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+          { src: './icon.png?v=1', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: './icon.png?v=1', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
         ]
       }, null, 2);
 
-      const html = `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width,initial-scale=1">\n  <title>${title}</title>\n  <link rel="manifest" href="manifest.json?v=1">\n  <script src="https://cdn.tailwindcss.com"></script>\n</head>\n<body class="bg-zinc-950 text-white min-h-screen flex items-center justify-center p-6">\n  <div class="text-center space-y-2">\n    <h1 class="text-2xl font-black">${title}</h1>\n    <p class="text-xs text-zinc-400">Ready for Patch 1 via App Forge</p>\n  </div>\n</body>\n</html>`;
+      const sw = "self.addEventListener('install',e=>self.skipWaiting());self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));self.addEventListener('fetch',e=>e.respondWith(fetch(e.request)));";
 
-      for (const [file, content] of [['manifest.json', manifest], ['index.html', html]]) {
+      const html = `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width,initial-scale=1">\n  <title>${title}</title>\n  <link rel="manifest" href="manifest.json?v=1">\n  <script src="https://cdn.tailwindcss.com"></script>\n</head>\n<body class="bg-zinc-950 text-white min-h-screen flex items-center justify-center p-6">\n  <div class="text-center space-y-2">\n    <h1 class="text-2xl font-black">${title}</h1>\n    <p class="text-xs text-zinc-400">Installable PWA ready for Patch 1</p>\n  </div>\n  <script>if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=1');</script>\n</body>\n</html>`;
+
+      const files = [
+        ['icon.png', makeStarterIconB64(title)],
+        ['sw.js', encodeB64(sw)],
+        ['manifest.json', encodeB64(manifest)],
+        ['index.html', encodeB64(html)]
+      ];
+      for (const [file, content] of files) {
         await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${file}`, {
           method: 'PUT', headers,
-          body: JSON.stringify({ message: `Init ${file} via Fast-Launch`, content: encodeB64(content) })
+          body: JSON.stringify({ message: `Init ${file} via Fast-Launch`, content })
         });
       }
 
@@ -133,7 +156,7 @@
         body: JSON.stringify({ source: { branch: 'main', path: '/' } })
       });
 
-      alert(`✅ ${repo} created & Pages enabled! Polling live build...`);
+      alert(`✅ ${repo} created with icon.png, sw.js & Pages! Polling live build...`);
       startPagesPoll(repo);
     } catch (e) {
       alert('Fast-Launch Error: ' + e.message);
@@ -155,7 +178,7 @@
       btn.id = 'afFastLaunchBtn';
       btn.type = 'button';
       btn.className = 'col-span-2 flex flex-col items-center justify-center px-2 py-2 leading-tight text-center rounded-xl bg-fuchsia-950/85 border border-fuchsia-400/50 text-fuchsia-200';
-      btn.innerHTML = `<span class='font-black text-xs'>⚡ Fast-Launch New App</span><span class='text-[10px] font-normal opacity-75 mt-0.5'>Public repo + maskable PWA + auto-Pages</span>`;
+      btn.innerHTML = `<span class='font-black text-xs'>⚡ Fast-Launch New App</span><span class='text-[10px] font-normal opacity-75 mt-0.5'>Public repo + icon.png + sw.js + auto-Pages</span>`;
       btn.onclick = openFastLaunch;
       grid.appendChild(btn);
     }
