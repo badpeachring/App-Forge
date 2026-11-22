@@ -39,6 +39,39 @@
     return (await r.json()).login;
   }
 
+  function detectTargetRepo(rawText) {
+    if (!rawText) return '';
+    const headerMatch = rawText.match(/\/\/\s*TARGET:\s*([a-zA-Z0-9._-]+)/i);
+    if (headerMatch) return headerMatch[1];
+    try {
+      const obj = JSON.parse(rawText);
+      if (obj && typeof obj.repo === 'string' && obj.repo.trim()) return obj.repo.trim();
+    } catch {
+      const m = rawText.match(/"repo"\s*:\s*"([^"]+)"/);
+      if (m) return m[1].trim();
+    }
+    return '';
+  }
+
+  function syncRepoDropdown(targetRepo) {
+    const sel = $('repoSelect');
+    if (!sel || !targetRepo) return false;
+    const match = Array.from(sel.options).find(o => o.value.toLowerCase() === targetRepo.toLowerCase());
+    if (match) {
+      if (sel.value !== match.value) {
+        sel.value = match.value;
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      return true;
+    }
+    const opt = document.createElement('option');
+    opt.value = targetRepo; opt.textContent = targetRepo;
+    sel.appendChild(opt);
+    sel.value = targetRepo;
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+    return true;
+  }
+
   let pollTimer = null;
   async function startPagesPoll(targetRepo) {
     const repo = targetRepo || getRepo();
@@ -94,14 +127,23 @@
     if (!modal.querySelector('#afJsonFileWrap')) {
       const wrap = document.createElement('div');
       wrap.id = 'afJsonFileWrap';
-      wrap.className = 'flex items-center justify-between gap-2';
-      wrap.innerHTML = `<div class='flex items-center gap-1.5'><label class='px-2.5 py-1.5 rounded-lg bg-indigo-600/30 border border-indigo-400/50 text-indigo-200 text-[11px] font-bold cursor-pointer'>📂 Load .json<input id='afJsonFileIn' type='file' accept='.json,application/json,.txt' class='hidden'></label><button id='afClearJsonBtn' type='button' class='px-2.5 py-1.5 rounded-lg bg-rose-950/80 border border-rose-500/40 text-rose-200 text-[11px] font-bold'>🗑️ Clear</button></div><span id='afCharCount' class='text-[10px] font-mono text-slate-400'>0 chars</span>`;
+      wrap.className = 'space-y-1.5';
+      wrap.innerHTML = `<div class='flex items-center justify-between gap-2'><div class='flex items-center gap-1.5'><label class='px-2.5 py-1.5 rounded-lg bg-indigo-600/30 border border-indigo-400/50 text-indigo-200 text-[11px] font-bold cursor-pointer'>📂 Load .json<input id='afJsonFileIn' type='file' accept='.json,application/json,.txt' class='hidden'></label><button id='afClearJsonBtn' type='button' class='px-2.5 py-1.5 rounded-lg bg-rose-950/80 border border-rose-500/40 text-rose-200 text-[11px] font-bold'>🗑️ Clear</button></div><span id='afCharCount' class='text-[10px] font-mono text-slate-400'>0 chars</span></div><div id='afTargetBanner' class='px-2.5 py-1 rounded-lg bg-emerald-950/70 border border-emerald-500/35 text-[11px] font-mono text-emerald-300'>🎯 Target: ${getRepo() || 'Auto-detect from JSON'}</div>`;
       ta.insertAdjacentElement('beforebegin', wrap);
 
       const upd = () => {
-        const n = ta.value.length;
+        const raw = ta.value;
+        const n = raw.length;
         const c = $('afCharCount');
         if (c) { c.textContent = `${n.toLocaleString()} chars`; c.className = n >= 19500 ? 'text-[10px] font-mono text-amber-300 font-bold' : 'text-[10px] font-mono text-slate-400'; }
+        const detected = detectTargetRepo(raw);
+        const banner = $('afTargetBanner');
+        if (detected) {
+          syncRepoDropdown(detected);
+          if (banner) banner.textContent = `🎯 Auto-Target Locked: ${detected}`;
+        } else if (banner) {
+          banner.textContent = `🎯 Target: ${getRepo() || 'Paste JSON to auto-detect'}`;
+        }
       };
       ta.addEventListener('input', upd);
       upd();
@@ -121,12 +163,17 @@
         b.dataset.clearHook = '1';
         b.addEventListener('click', () => clearPatchBox(ta));
       }
-      if (/Execute Patch/i.test(b.textContent) && !b.dataset.pollHook) {
-        b.dataset.pollHook = '1';
+      if (/Dry Run|Execute Patch/i.test(b.textContent) && !b.dataset.targetHook) {
+        b.dataset.targetHook = '1';
         b.addEventListener('click', () => {
-          setTimeout(() => startPagesPoll(getRepo()), 3000);
-          setTimeout(() => clearPatchBox(ta), 2500);
-        });
+          const det = detectTargetRepo(ta.value);
+          if (det) syncRepoDropdown(det);
+          if (/Execute Patch/i.test(b.textContent)) {
+            const target = det || getRepo();
+            setTimeout(() => startPagesPoll(target), 3000);
+            setTimeout(() => clearPatchBox(ta), 2500);
+          }
+        }, true);
       }
     });
   }
@@ -178,6 +225,7 @@
         body: JSON.stringify({ source: { branch: 'main', path: '/' } })
       });
 
+      syncRepoDropdown(repo);
       alert(`✅ ${repo} created with icon.png, sw.js & Pages! Polling live build...`);
       startPagesPoll(repo);
     } catch (e) {
