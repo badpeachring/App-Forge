@@ -73,38 +73,60 @@
   }
   window.afStartPagesPoll = startPagesPoll;
 
+  function clearPatchBox(ta) {
+    if (!ta) return;
+    ta.value = '';
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  let wasPatchOpen = false;
   function enhancePatchModal() {
     const modal = $('afPatchModal');
-    if (!modal || modal.classList.contains('hidden')) return;
+    if (!modal) return;
+    const isOpen = !modal.classList.contains('hidden');
     const ta = modal.querySelector('textarea');
-    if (!ta || modal.querySelector('#afJsonFileWrap')) return;
+    if (!ta) return;
 
-    const wrap = document.createElement('div');
-    wrap.id = 'afJsonFileWrap';
-    wrap.className = 'flex items-center justify-between gap-2';
-    wrap.innerHTML = `<label class='px-3 py-1.5 rounded-lg bg-indigo-600/30 border border-indigo-400/50 text-indigo-200 text-[11px] font-bold cursor-pointer'>📂 Load .json File<input id='afJsonFileIn' type='file' accept='.json,application/json,.txt' class='hidden'></label><span id='afCharCount' class='text-[10px] font-mono text-slate-400'>0 chars</span>`;
-    ta.insertAdjacentElement('beforebegin', wrap);
+    if (isOpen && !wasPatchOpen) clearPatchBox(ta);
+    wasPatchOpen = isOpen;
+    if (!isOpen) return;
 
-    const upd = () => {
-      const n = ta.value.length;
-      const c = $('afCharCount');
-      if (c) { c.textContent = `${n.toLocaleString()} chars`; c.className = n >= 19500 ? 'text-[10px] font-mono text-amber-300 font-bold' : 'text-[10px] font-mono text-slate-400'; }
-    };
-    ta.addEventListener('input', upd);
-    upd();
+    if (!modal.querySelector('#afJsonFileWrap')) {
+      const wrap = document.createElement('div');
+      wrap.id = 'afJsonFileWrap';
+      wrap.className = 'flex items-center justify-between gap-2';
+      wrap.innerHTML = `<div class='flex items-center gap-1.5'><label class='px-2.5 py-1.5 rounded-lg bg-indigo-600/30 border border-indigo-400/50 text-indigo-200 text-[11px] font-bold cursor-pointer'>📂 Load .json<input id='afJsonFileIn' type='file' accept='.json,application/json,.txt' class='hidden'></label><button id='afClearJsonBtn' type='button' class='px-2.5 py-1.5 rounded-lg bg-rose-950/80 border border-rose-500/40 text-rose-200 text-[11px] font-bold'>🗑️ Clear</button></div><span id='afCharCount' class='text-[10px] font-mono text-slate-400'>0 chars</span>`;
+      ta.insertAdjacentElement('beforebegin', wrap);
 
-    $('afJsonFileIn').onchange = async e => {
-      const f = e.target.files?.[0];
-      if (!f) return;
-      ta.value = await f.text();
-      ta.dispatchEvent(new Event('input', { bubbles: true }));
-      e.target.value = '';
-    };
+      const upd = () => {
+        const n = ta.value.length;
+        const c = $('afCharCount');
+        if (c) { c.textContent = `${n.toLocaleString()} chars`; c.className = n >= 19500 ? 'text-[10px] font-mono text-amber-300 font-bold' : 'text-[10px] font-mono text-slate-400'; }
+      };
+      ta.addEventListener('input', upd);
+      upd();
+
+      $('afClearJsonBtn').onclick = () => { clearPatchBox(ta); ta.focus(); };
+      $('afJsonFileIn').onchange = async e => {
+        const f = e.target.files?.[0];
+        if (!f) return;
+        ta.value = await f.text();
+        ta.dispatchEvent(new Event('input', { bubbles: true }));
+        e.target.value = '';
+      };
+    }
 
     modal.querySelectorAll('button').forEach(b => {
+      if (/Close/i.test(b.textContent) && !b.dataset.clearHook) {
+        b.dataset.clearHook = '1';
+        b.addEventListener('click', () => clearPatchBox(ta));
+      }
       if (/Execute Patch/i.test(b.textContent) && !b.dataset.pollHook) {
         b.dataset.pollHook = '1';
-        b.addEventListener('click', () => setTimeout(() => startPagesPoll(getRepo()), 3000));
+        b.addEventListener('click', () => {
+          setTimeout(() => startPagesPoll(getRepo()), 3000);
+          setTimeout(() => clearPatchBox(ta), 2500);
+        });
       }
     });
   }
@@ -186,5 +208,5 @@
 
   const obs = new MutationObserver(() => { mountControls(); enhancePatchModal(); });
   obs.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
-  setInterval(mountControls, 1000);
+  setInterval(() => { mountControls(); enhancePatchModal(); }, 600);
 })();
